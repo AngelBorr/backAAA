@@ -1,12 +1,12 @@
 {
   "name": "backaaa",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/app.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:dev": "node --watch ./src/app.js",
-    "start:prod": "cross-env NODE_ENV=production node --watch ./src/app.js"
+    "start:prod": "cross-env NODE_ENV=production node ./src/app.js"
   },
   "keywords": [],
   "author": "",
