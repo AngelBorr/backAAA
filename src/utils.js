@@ -91,15 +91,16 @@ export const specs = swaggerJsdoc(swaggerOptions) */
 //configuracion multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    const urlData = 'htts://backaaa-production.up.railway.app'
     switch (req.body.role) {
       case 'alumno-1':
-        cb(null, path.join(`htts://backaaa-production.up.railway.app/data/uploads/alumnos/primero`))
+        cb(null, path.join(`${urlData}/data/uploads/alumnos/primero`))
         break
       case 'alumno-2':
-        cb(null, path.join(`htts://backaaa-production.up.railway.app/data/uploads/alumnos/segundo`))
+        cb(null, path.join(`${urlData}/data/uploads/alumnos/segundo`))
         break
       default:
-        cb(null, path.join(`htts://backaaa-production.up.railway.app/data/uploads/alumnos/tercero`))
+        cb(null, path.join(`${urlData}/data/uploads/alumnos/tercero`))
         break
     }
   },
