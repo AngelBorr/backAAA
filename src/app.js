@@ -27,6 +27,7 @@ const PASS_MONGO = env.passMongo
 const DB_CLUSTER = env.dbCluster
 const DB_NAME = env.dbColecction
 const rutaMongo = `mongodb+srv://${USER_MONGO}:${PASS_MONGO}@${DB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority`
+//const rutaMongo = `mongodb+srv://${USER_MONGO}:${PASS_MONGO}@cluster0.wd5qrnn.mongodb.net/`
 
 //data session
 const secret = env.secret
@@ -75,5 +76,5 @@ mongoose
   })
   .then(() => console.log('conectado a mongo'))
   .catch((err) => {
-    console.log(err)
+    console.log('app.js', err.message)
   })
