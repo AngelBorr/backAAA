@@ -20,9 +20,9 @@ export default class UsersRouter extends MyOwnRouter {
     //this.post('/addStudent', ['public'], uploader.array('alumnos'), addStudent)
 
     // ruta get debera traer a todos los usuarios
-    this.get('/', ['ADMIN'], getUsers)
+    this.get('/', ['public'], getUsers)
 
     // ruta delete debera eliminar a un usuario por su id
-    this.delete('/', ['ADMIN'], deleteUser)
+    this.delete('/:id', ['public'], deleteUser)
   }
 }

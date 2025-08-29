@@ -2,7 +2,7 @@ import StudentsRepository from '../repositories/student.repository.js'
 import CustomError from './errors/customError.js'
 import EErrors from './errors/enums.js'
 import { generateUserErrorInfo } from './errors/info.js'
-import fs from 'fs'
+import FileService from './service.files.js'
 
 class StudentsService {
   constructor() {
@@ -89,8 +89,34 @@ class StudentsService {
         throw new Error('El estudiante no existe')
       } else {
         //eliminar la imagen o archivo del servidor
-        const urlImage = student.documents[0].reference
-        if (urlImage) {
+        const idImage = student.documents[0].gridfsId
+        console.log('service-student-1', idImage)
+        const image = await FileService.getFileById(idImage)
+        console.log('service-student-2', image)
+
+        // si imagen existe se elimina y si no da error y no se puede eliminar al estudiante
+        if ((image.success = false)) {
+          throw new Error('Archivo no encontrado en GridFS')
+        } else {
+          const deleteImage = await FileService.deleteFileById(idImage)
+          console.log('Service-estudent-3', deleteImage)
+          if ((deleteImage.success = false)) {
+            throw new Error('No se pudo eliminar la imagen del estudiante')
+          } else {
+            const deleteStudent = await this.students.deleteStudent(studentId)
+            console.log('service-student-4', deleteStudent)
+            if (deleteStudent.deletedCount != 1) {
+              throw new Error('No se pudo eliminar al estudiante')
+            } else {
+              return {
+                success: true,
+                deleteStudent: deleteStudent
+              }
+            }
+          }
+        }
+
+        /* if (urlImage) {
           const deleteImage = await fs.promises.unlink(urlImage)
           if (deleteImage) {
             throw new Error('No se pudo eliminar la imagen del estudiante')
@@ -102,8 +128,7 @@ class StudentsService {
             } else {
               return deletedStudent
             }
-          }
-        }
+          }*/
       }
     } catch (error) {
       console.log(error.message)

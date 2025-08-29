@@ -213,30 +213,24 @@ class UsersService {
     }
   }
 
-  /* async deleteUserById(id){
-        try {
-            const userId = id
-            const user = await this.users.getUserById(userId)
-            if (!user) {
-                throw new Error("El usuario no existe")
-            }else{
-                //se envia un correo al usuario informando la eliminacion de su cuenta por inactividad
-                const sendMail = await mailingService.createEmailDeleteUserToInactivity(user)
-                if(sendMail){
-                    const deletedUser = await this.users.deleteUser(userId)
-                    if(!deletedUser){
-                        throw new Error('No se pudo eliminar el usuario')
-                    }else{
-                        return deletedUser;
-                    }
-                }else{
-                    throw new Error('Ocurrio un error en el envio del correo electronico para notificar al usuario que su cuenta ha sido eliminada')
-                }                
-            }
-        } catch (error) {            
-            console.log(error.message);
+  async deleteUserById(id) {
+    try {
+      const userId = id
+      const user = await this.users.getUserById(userId)
+      if (!user) {
+        throw new Error('El usuario no existe')
+      } else {
+        const deletedUser = await this.users.deleteUser(userId)
+        if (!deletedUser) {
+          throw new Error('No se pudo eliminar el usuario')
+        } else {
+          return deletedUser
         }
-    } */
+      }
+    } catch (error) {
+      console.log(error.message)
+    }
+  }
 }
 
 export default UsersService

@@ -24,7 +24,12 @@ const alumnosSchema = new mongoose.Schema({
   documents: [
     {
       name: String,
-      reference: String
+      reference: String,
+      //se agrega info de gridfs
+      gridfsId: String,
+      filename: String,
+      uploadDate: Date,
+      contentType: String
     }
   ]
 })

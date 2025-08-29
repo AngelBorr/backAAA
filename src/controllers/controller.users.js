@@ -77,7 +77,7 @@ export const loginUser = async (req, res) => {
 }
 
 export const failLogin = async (req, res) => {
-  req.logger.error('Fallo al Logearse, credenciales invalidas')
+  //req.logger.error('Fallo al Logearse, credenciales invalidas')
   res.send({ error: 'Fallo al Logearse' })
 }
 
@@ -233,13 +233,15 @@ export const addDocumentsToUser = async (req, res) => {
 //trae a todos los usuarios
 export const getUsers = async (req, res) => {
   try {
-    req.logger.info('Se solicitan a todos los usuarios')
+    //req.logger.info('Se solicitan a todos los usuarios')
     const users = await usersService.getAllUsers()
-    return users
+    return res
+      .status(200)
+      .send({ status: 'success', message: 'Usuarios obtenidos', payload: users })
   } catch (error) {
-    req.logger.fatal(
+    /* req.logger.fatal(
       `Se produjo un error al intentar obtener a todos los usuario, ${error.message}`
-    )
+    ) */
     return res
       .status(500)
       .send(`Se produjo un error al intentar obtener a todos los usuario, ${error.message}`)
@@ -249,7 +251,8 @@ export const getUsers = async (req, res) => {
 //elimina al usuario por su id
 export const deleteUser = async (req, res) => {
   try {
-    const id = req.body.id
+    //recibir id de params
+    const { id } = req.params
     const userDelete = await usersService.deleteUserById(id)
     if (userDelete.deletedCount === 1) {
       return res.status(200).send('Usuario eliminado exitosamente')

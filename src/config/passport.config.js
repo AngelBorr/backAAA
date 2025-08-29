@@ -87,7 +87,6 @@ const initializePassport = () => {
       try {
         //no incorpora el roll
         const user = await usersService.getUsers(username)
-        console.log('estrategia login', user)
         if (!user) {
           return done(null, false, { message: 'Usuario incorrectos y/o inexistente' })
         }
@@ -99,7 +98,7 @@ const initializePassport = () => {
         }
         const userNoPass = new UserDTO(user)
         const token = generateToken(userNoPass)
-        return done(null, user, token) //porque token no es enviado al font?
+        return done(null, user, token)
       } catch (error) {
         return done({ message: 'Error al Logearse' })
       }

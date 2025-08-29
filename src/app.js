@@ -4,30 +4,27 @@ import displayRoutes from 'express-routemap'
 import mongoose from 'mongoose'
 import env from './config.js'
 import UsersRouter from './routes/users.router.js'
-//import ViewRouter from './routes/views.router.js'
-//import handlerbars from 'express-handlebars'
-import __dirname from './utils.js'
 import SessionsRouter from './routes/sessions.router.js'
 import initializePassport from './config/passport.config.js'
 import passport from 'passport'
 import session from 'express-session'
 import MongoStore from 'connect-mongo'
 import StudentRouter from './routes/student.router.js'
+import { GridFSBucket } from 'mongodb'
+import FilesRouter from './routes/files.router.js'
+import { MONGO_URI } from './utils.js'
 
 //routes
 const usersRouter = new UsersRouter()
 const sessionsRouter = new SessionsRouter()
 const studentsRouter = new StudentRouter()
-//const viewRouter = new ViewRouter()
+const filesRouter = new FilesRouter()
 
-//const data mongo
+//port
 const PORT = 8080
-const USER_MONGO = env.userMongo
-const PASS_MONGO = env.passMongo
-const DB_CLUSTER = env.dbCluster
-const DB_NAME = env.dbColecction
-const rutaMongo = `mongodb+srv://${USER_MONGO}:${PASS_MONGO}@${DB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority`
-//const rutaMongo = `mongodb+srv://${USER_MONGO}:${PASS_MONGO}@cluster0.wd5qrnn.mongodb.net/`
+
+//ruta mongo atlas
+const rutaMongo = MONGO_URI
 
 //data session
 const secret = env.secret
@@ -57,10 +54,48 @@ initializePassport()
 app.use(passport.initialize())
 app.use(passport.session())
 
+// ↓↓↓ CONFIGURACIÓN GRIDFS BUCKET GLOBAL ↓↓↓
+let gfsBucket
+
+app.use((req, res, next) => {
+  try {
+    if (!gfsBucket && mongoose.connection.readyState === 1) {
+      gfsBucket = new GridFSBucket(mongoose.connection.db, {
+        bucketName: 'studentFiles'
+      })
+      console.log('GridFSBucket inicializado correctamente')
+    }
+    req.gfsBucket = gfsBucket
+
+    next()
+  } catch (error) {
+    console.error('Error inicializando GridFSBucket:', error)
+    next(error)
+  }
+})
+
+// ↓↓↓ Middleware adicional para verificar conexión async (opcional) ↓↓↓
+app.use(async (req, res, next) => {
+  // Si el bucket no está inicializado pero MongoDB está conectado, inicializarlo
+  if (!req.gfsBucket && mongoose.connection.readyState === 1) {
+    try {
+      gfsBucket = new GridFSBucket(mongoose.connection.db, {
+        bucketName: 'studentFiles'
+      })
+      req.gfsBucket = gfsBucket
+      console.log('GridFSBucket inicializado en middleware async')
+    } catch (error) {
+      console.error('Error inicializando GridFSBucket en async:', error)
+    }
+  }
+  next()
+})
+
 //rutas
 app.use('/api/users', usersRouter.getRouter())
 app.use('/api/sessions', sessionsRouter.getRouter())
 app.use('/api/students', studentsRouter.getRouter())
+app.use('/api/files', filesRouter.getRouter())
 
 //server en puerto 8080
 const httpServer = app.listen(`${PORT}`, () => {
@@ -74,7 +109,9 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true
   })
-  .then(() => console.log('conectado a mongo'))
+  .then(async () => {
+    console.log('conectado a mongo')
+  })
   .catch((err) => {
     console.log('app.js', err.message)
   })

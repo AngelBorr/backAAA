@@ -3,15 +3,13 @@ import { dirname } from 'path'
 import bcrypt from 'bcrypt'
 import env from './config.js'
 import jwt from 'jsonwebtoken'
-/* import { faker } from '@faker-js/faker/locale/es_MX'
-import nodemailer from 'nodemailer'
-import swaggerJsdoc from 'swagger-jsdoc' */
 import path from 'path'
 import multer from 'multer'
 
 export const createHash = (password) => bcrypt.hashSync(password, bcrypt.genSaltSync(10))
 export const isValidPassword = (user, password) => {
-  return bcrypt.compareSync(password, user.password)
+  const result = bcrypt.compareSync(password, user.password)
+  return result
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -27,80 +25,26 @@ export const generateToken = (user) => {
   const token = jwt.sign({ user }, `${PRIVATE_KEY}`, { expiresIn: '24h' })
   return token
 }
-/* 
-export const cookieExtractor = (req) => {
-    let token = null;
-    if (req && req.cookies) {
-        token = req.cookies['cookieToken'];
-        return token
-    }
-    return token;
-}; */
 
-//config mocking de products
+//configuracion ruta mongo para gridfs
+const USER_MONGO = env.userMongo
+const PASS_MONGO = env.passMongo
+const DB_CLUSTER = env.dbCluster
+const DB_NAME = env.dbColecction
+export const MONGO_URI = `mongodb+srv://${USER_MONGO}:${PASS_MONGO}@${DB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority`
 
-/* export const generateProduct = () => {
-    const product = {
-        title: faker.commerce.product(),
-        price: faker.commerce.price(),
-        category: faker.commerce.department(),
-        stock: faker.number.int({ min: 1, max: 50 }),
-        thumbnail: 'Sin Imagen'/* faker.image.url() ,
-        _id: faker.database.mongodbObjectId(),
-        code: faker.string.alphanumeric(5),
-        description: faker.commerce.productDescription(),
-    }    
-
-    return product
-}; */
-
-//config nodemailer
-/* export const generateTokenForEmail = (email) => {
-    const token = jwt.sign({email}, `${PRIVATE_KEY}`, {expiresIn: '1h'})
-    return token
-}
-
-const mailConfig = {
-    service: env.mailingService,
-    port: env.mailingPort,
-    auth: {
-        user: env.mailingUser,
-        pass: env.mailingPass,
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-} */
-
-//export const transport = nodemailer.createTransport(mailConfig);
-
-//configuracion swagger
-/* const swaggerOptions ={
-    definition:{
-        openapi: '3.0.1',
-        info: {
-            title: 'Documentacion del poder y del saber',
-            description: 'API pensada para clase de Swagger'
-        }
-    },
-    apis:[`${__dirname}/docs/(**)/*.yaml`]eliminar parentesis
-}
-
-export const specs = swaggerJsdoc(swaggerOptions) */
-
-//configuracion multer
-const storage = multer.diskStorage({
+//configuracion multer sin gridfs
+/* const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const urlData = 'htts://backaaa-production.up.railway.app'
     switch (req.body.role) {
       case 'alumno-1':
-        cb(null, path.join(`${urlData}/data/uploads/alumnos/primero`))
+        cb(null, path.join(`${__dirname}/dao/uploads/alumnos/primero`))
         break
       case 'alumno-2':
-        cb(null, path.join(`${urlData}/data/uploads/alumnos/segundo`))
+        cb(null, path.join(`${__dirname}/dao/uploads/alumnos/segundo`))
         break
       default:
-        cb(null, path.join(`${urlData}/data/uploads/alumnos/tercero`))
+        cb(null, path.join(`${__dirname}/dao/uploads/alumnos/tercero`))
         break
     }
   },
@@ -114,5 +58,75 @@ export const uploader = multer({
   onError: function (err, next) {
     console.log(err)
     next()
+  }
+}) */
+
+//configuracion multer con gridfs
+// Crear almacenamiento GridFS
+/* const storage = new GridFsStorage({
+  url: MONGO_URI,
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  file: (req, file) => {
+    return new Promise((resolve, reject) => {
+      const filename = `${Date.now()}-${file.originalname}`
+      const fileInfo = {
+        filename: filename,
+        bucketName: 'studentFiles',
+        metadata: {
+          originalName: file.originalname,
+          uploadDate: new Date(),
+          role: req.body.role || 'tercero',
+          contentType: file.mimetype,
+          studentData: {
+            name: req.body.name,
+            email: req.body.email
+          }
+        }
+      }
+      resolve(fileInfo)
+    })
+  }
+})
+
+export const uploader = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // Límite de 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Validar tipos de archivo permitidos
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/
+    const extension = file.originalname.toLowerCase()
+    const extname = allowedTypes.test(extension)
+    const mimetype = allowedTypes.test(file.mimetype)
+
+    if (mimetype && extname) {
+      return cb(null, true)
+    } else {
+      cb(new Error('Tipo de archivo no permitido. Solo se permiten imágenes, PDF y documentos.'))
+    }
+  },
+  onError: function (err, next) {
+    console.log('Error en upload:', err)
+    next(err)
+  }
+}) */
+
+// ↓↓↓ CONFIGURACIÓN MULTER SIMPLIFICADA ↓↓↓
+export const uploader = multer({
+  storage: multer.memoryStorage(), // Solo en memoria
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/
+    const extname = allowedTypes.test(file.originalname.toLowerCase())
+    const mimetype = allowedTypes.test(file.mimetype)
+
+    if (mimetype && extname) {
+      cb(null, true)
+    } else {
+      cb(new Error('Tipo de archivo no permitido'))
+    }
   }
 })
