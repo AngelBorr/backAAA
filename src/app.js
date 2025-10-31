@@ -13,12 +13,14 @@ import StudentRouter from './routes/student.router.js'
 import { GridFSBucket } from 'mongodb'
 import FilesRouter from './routes/files.router.js'
 import { MONGO_URI } from './utils.js'
+import InscriptionsRouter from './routes/inscriptions.router.js'
 
 //routes
 const usersRouter = new UsersRouter()
 const sessionsRouter = new SessionsRouter()
 const studentsRouter = new StudentRouter()
 const filesRouter = new FilesRouter()
+const inscriptionsRouter = new InscriptionsRouter()
 
 //port
 const PORT = 8080
@@ -96,6 +98,7 @@ app.use('/api/users', usersRouter.getRouter())
 app.use('/api/sessions', sessionsRouter.getRouter())
 app.use('/api/students', studentsRouter.getRouter())
 app.use('/api/files', filesRouter.getRouter())
+app.use('/api/inscriptions', inscriptionsRouter.getRouter())
 
 //server en puerto 8080
 const httpServer = app.listen(`${PORT}`, () => {
@@ -115,3 +118,5 @@ mongoose
   .catch((err) => {
     console.log('app.js', err.message)
   })
+
+export default app

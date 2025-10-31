@@ -4,9 +4,10 @@
   "main": "src/app.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start:dev": "node --watch ./src/app.js",
-    "start:prod": "cross-env NODE_ENV=production node ./src/app.js"
+    "start:prod": "cross-env NODE_ENV=production node ./src/app.js",
+    "test": "mocha test/**/*.test.js --require @babel/register --timeout 10000 --exit",
+    "test:watch": "mocha test/**/*.test.js --require @babel/register --timeout 10000 --watch --exit"
   },
   "keywords": [],
   "author": "",
@@ -31,5 +32,12 @@
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0"
+  },
+  "devDependencies": {
+    "@babel/register": "^7.28.3",
+    "chai": "^6.2.0",
+    "mocha": "^11.7.4",
+    "mongodb-memory-server": "^10.2.3",
+    "supertest": "^7.1.4"
   }
 }
