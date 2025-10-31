@@ -19,7 +19,7 @@ export default class InscriptionsRouter extends MyOwnRouter {
     this.get('/email/:email', ['public'], getInscription)
 
     // la ruta post  debera crear una nueva inscripcion
-    this.post('/', ['public'], addInscription)
+    this.post('/add', ['public'], addInscription)
 
     // la ruta delete debera eliminar una inscripcion por su id
     this.delete('/:id', ['public'], deleteInscriptionById)
