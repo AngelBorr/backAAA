@@ -12,7 +12,6 @@ class SessionsService {
    * @returns {{status:number, message:string, token?:string}}
    */
   async generateAuthResponse(user, res) {
-    console.log('SessionsService.generateAuthResponse user:', user)
     try {
       // Payload mínimo y seguro (sin password ni datos sensibles) == dto
       const payload = {
