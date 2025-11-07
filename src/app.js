@@ -28,7 +28,19 @@ const rutaMongo = env.mongo.url
 const secret = env.session.secret
 
 const app = express()
-app.use(cors())
+
+//config cors
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173', // frontend local vite (cambiar si usás otro puerto)
+      'https://backaaa-frontend.up.railway.app' // tu frontend deployado
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+)
 
 //config express
 app.use(express.json())
