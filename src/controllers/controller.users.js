@@ -8,38 +8,41 @@ import {
 import EErrors from '../services/errors/enums.js'
 import CustomError from '../services/errors/customError.js'
 
-/* import { PRIVATE_KEY, generateToken, transport } from "../utils.js";
-import jwt from 'jsonwebtoken' */
-
 const usersService = new UsersService()
 
-/* export const registerUser = async (req, res) => {
-  //req.logger.info('El usuario se creo correctamente')
-  const bodyUser = req.body
-  const user = await usersService.createUser(bodyUser)
-  if (!user) {
-    //req.logger.error('No se pudo crear el usuario, verifique los datos ingresados')
-    return res.status(400).send({ status: 'Error', error: 'No se pudo crear el usuario' })
-  } else {
-    //req.logger.info('Usuario creado correctamente: ' + user)
-    return res
-      .status(200)
-      .send({ status: 'success', message: 'Usuario registrado', payload: req.user })
-  }
-} */
-
+// 🧩 Crear usuario (solo ADMIN, ruta protegida)
 export const registerUser = async (req, res) => {
-  //req.logger.info('El usuario se creo correctamente')
-  return res
-    .status(200)
-    .send({ status: 'success', message: 'Usuario registrado', payload: req.user })
+  try {
+    const result = await usersService.registerUser(req.body)
+
+    if (!result.success) {
+      const message = result.message || 'Error desconocido'
+      let status = 400
+
+      if (message.includes('ya está registrado')) status = 409
+      else if (message.includes('obligatorios')) status = 400
+      else if (message.includes('contraseña')) status = 422
+      else if (message.includes('base de datos')) status = 500
+
+      return res.status(status).json({ status: 'error', message })
+    }
+
+    // ✅ Usuario creado correctamente (sin token)
+    return res.status(201).json({
+      status: 'success',
+      message: result.message,
+      user: result.user
+    })
+  } catch (error) {
+    console.error('controller.users.registerUser error:', error)
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error interno del servidor'
+    })
+  }
 }
 
-export const failRegister = async (req, res) => {
-  req.logger.error('Fallo en la Estrategia')
-  res.status(404).send({ error: 'Fallo' })
-}
-
+// 🧩 Login de usuario
 export const loginUser = async (req, res) => {
   if (!req.user) {
     const { firstName, lastName, email, password, role } = req.user
@@ -60,6 +63,7 @@ export const loginUser = async (req, res) => {
         message: 'Error in the credentials User'
       })
     }
+    console.log('controller', req.user)
     //req.logger.fatal('Las credenciales ingresados son invalidas')
     return res.status(400).send({ status: 'Error', error: 'Credenciales Invalidas' })
   }
@@ -231,20 +235,41 @@ export const addDocumentsToUser = async (req, res) => {
 }
 
 //trae a todos los usuarios
+// ✅ Controlador: Obtener todos los usuarios
 export const getUsers = async (req, res) => {
   try {
-    //req.logger.info('Se solicitan a todos los usuarios')
+    // 🔒 Validación adicional: requiere usuario autenticado
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'No autorizado. Token inválido o usuario no autenticado.'
+      })
+    }
+
     const users = await usersService.getAllUsers()
-    return res
-      .status(200)
-      .send({ status: 'success', message: 'Usuarios obtenidos', payload: users })
+
+    // 🔎 Validar que sea un array
+    if (!Array.isArray(users)) {
+      throw new Error('El formato de datos de usuarios es inválido.')
+    }
+
+    // ✅ Respuesta estándar coherente con el resto del backend
+    return res.status(200).json({
+      status: 'success',
+      message:
+        users.length > 0
+          ? 'Usuarios obtenidos correctamente.'
+          : 'No se encontraron usuarios registrados.',
+      data: users
+    })
   } catch (error) {
-    /* req.logger.fatal(
-      `Se produjo un error al intentar obtener a todos los usuario, ${error.message}`
-    ) */
-    return res
-      .status(500)
-      .send(`Se produjo un error al intentar obtener a todos los usuario, ${error.message}`)
+    console.error('controller.users.getUsers error:', error)
+
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error al obtener la lista de usuarios.'
+      // ⚠️ No exponemos error.message en producción
+    })
   }
 }
 

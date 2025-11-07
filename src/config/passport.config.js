@@ -14,7 +14,7 @@ import UsersService from '../services/service.users.js'
 
 import jwt from 'passport-jwt'
 
-import UserDTO from '../dto/user.dto.js'
+// import UserDTO from '../dto/user.dto.js'
 
 const usersService = new UsersService()
 const LocalStrategy = local.Strategy
@@ -50,7 +50,7 @@ const initializePassport = () => {
       async (req, username, password, done) => {
         const { firstName, lastName, email, role } = req.body
         try {
-          const existingUser = await usersService.getUsers(username)
+          const existingUser = await usersService.getUser(username)
           if (existingUser !== typeof Object) {
             const user = {
               firstName,
@@ -81,7 +81,7 @@ const initializePassport = () => {
     )
   )
 
-  passport.use(
+  /* passport.use(
     'login',
     new LocalStrategy({ usernameField: 'email' }, async (username, password, done) => {
       try {
@@ -117,6 +117,45 @@ const initializePassport = () => {
       return done({ message: 'Se produjo un error al deserializa el usuario' })
     }
   })
+} */
+
+  passport.use(
+    'login',
+    new LocalStrategy(
+      { usernameField: 'email', passwordField: 'password', session: false },
+      async (email, password, done) => {
+        try {
+          const normalizedEmail = String(email || '')
+            .trim()
+            .toLowerCase()
+          if (!normalizedEmail || !password) {
+            return done(null, false, { message: 'Email y contraseña son obligatorios' })
+          }
+
+          // Debe devolver un usuario por email. Mantengo el nombre original de tu servicio.
+          const user = await usersService.getUser(normalizedEmail)
+          if (!user) {
+            return done(null, false, { message: 'Usuario inexistente o credenciales inválidas' })
+          }
+
+          const valid = isValidPassword(user, password)
+          if (!valid) {
+            return done(null, false, { message: 'Contraseña incorrecta' })
+          }
+
+          // Éxito: passport pondrá user en req.user
+          return done(null, user)
+        } catch (err) {
+          return done(err) // Error del sistema mejorar mensaje
+        }
+      }
+    )
+  )
+
+  // Como NO usamos sesiones, serialize/deserialize no son necesarios;
+  // pero si quedan otros flujos que lo usen, los dejamos no-op:
+  passport.serializeUser((user, done) => done(null, user._id))
+  passport.deserializeUser(async (_id, done) => done(null, { _id }))
 }
 
 export default initializePassport

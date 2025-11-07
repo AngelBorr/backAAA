@@ -22,8 +22,18 @@ export default __dirname
 export const PRIVATE_KEY = env.keyPrivate //luego exportar desde .env
 
 export const generateToken = (user) => {
-  const token = jwt.sign({ user }, `${PRIVATE_KEY}`, { expiresIn: '24h' })
-  return token
+  // 🧱 Creamos el payload con solo los datos necesarios para el frontend
+  const payload = {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role
+  }
+
+  return jwt.sign({ user: payload }, config.jwt.privateKey, {
+    expiresIn: config.jwt.expiresIn
+  })
 }
 
 //configuracion ruta mongo para gridfs

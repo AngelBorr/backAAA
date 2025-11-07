@@ -12,7 +12,6 @@ import MongoStore from 'connect-mongo'
 import StudentRouter from './routes/student.router.js'
 import { GridFSBucket } from 'mongodb'
 import FilesRouter from './routes/files.router.js'
-import { MONGO_URI } from './utils.js'
 import InscriptionsRouter from './routes/inscriptions.router.js'
 
 //routes
@@ -22,14 +21,11 @@ const studentsRouter = new StudentRouter()
 const filesRouter = new FilesRouter()
 const inscriptionsRouter = new InscriptionsRouter()
 
-//port
-const PORT = 8080
-
 //ruta mongo atlas
-const rutaMongo = MONGO_URI
+const rutaMongo = env.mongo.url
 
 //data session
-const secret = env.secret
+const secret = env.session.secret
 
 const app = express()
 app.use(cors())
@@ -101,9 +97,9 @@ app.use('/api/files', filesRouter.getRouter())
 app.use('/api/inscriptions', inscriptionsRouter.getRouter())
 
 //server en puerto 8080
-const httpServer = app.listen(`${PORT}`, () => {
+const httpServer = app.listen(`${env.port}`, () => {
   displayRoutes(app)
-  console.log('servidor escuchando en el puerto 8080')
+  console.log(`servidor escuchando en el puerto ${env.port}`)
 })
 
 //conection a mongoose server

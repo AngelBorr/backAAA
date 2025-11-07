@@ -1,5 +1,3 @@
-import UsersRepository from '../repositories/user.repository.js'
-//import { createHash, isValidPassword } from '../utils.js'
 import CustomError from './errors/customError.js'
 import EErrors from './errors/enums.js'
 import {
@@ -8,13 +6,12 @@ import {
   generateUserErrorInfo
 } from './errors/info.js'
 import UserDTO from '../dto/user.dto.js'
-//import MailingService from "./service.mailing.js";
-
-//const mailingService = new MailingService
+import UsersManager from '../dao/managers/mongo/users.mongo.js'
+import { createHash, generateToken } from '../utils.js'
 
 class UsersService {
   constructor() {
-    this.users = new UsersRepository()
+    this.users = new UsersManager()
   }
 
   async getAllUsers() {
@@ -30,7 +27,7 @@ class UsersService {
   }
 
   //retorna el usuario
-  async getUsers(email) {
+  async getUser(email) {
     try {
       if (!email) {
         console.log('error')
@@ -41,7 +38,7 @@ class UsersService {
           message: 'Error trying to create a new user'
         })
       }
-      const user = await this.users.getUsers(email)
+      const user = await this.users.getUser(email)
       return user
     } catch (error) {
       throw new Error('Se produjo un error al leer el E-mail ingresado')
@@ -58,33 +55,60 @@ class UsersService {
   }
 
   //crea usuario
-  async createUser(bodyUser) {
+  async registerUser(data) {
     try {
-      if (typeof bodyUser != 'object') {
-        throw new Error(
-          'Se produjo un error al cargar los datos del nuevo usuario, verifique si los campos estan correctamente completados'
-        )
+      const { firstName, lastName, email, password, role } = data
+
+      if (!firstName || !lastName || !email || !password) {
+        return { success: false, message: 'Todos los campos son obligatorios' }
       }
-      const { firstName, lastName, email, password, role } = bodyUser
-      if (!firstName || !lastName || !email || !password || !role) {
-        console.log('error')
-        CustomError.createError({
-          name: 'user Creation Error',
-          cause: generateUserErrorInfo({
-            firstName,
-            lastName,
-            email,
-            password,
-            role
-          }),
-          code: EErrors.INVALID_TYPES_ERROR,
-          message: 'Error trying to create a new user'
-        })
+
+      const normalizedEmail = email.trim().toLowerCase()
+      const existingUser = await this.users.getUser(normalizedEmail)
+      if (existingUser) {
+        return { success: false, message: 'El usuario ya está registrado' }
       }
-      const user = await this.users.createUser(bodyUser)
-      return user
+
+      const passwordRegex =
+        /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&_.-])[A-Za-z\d@$!%*?&_.-]{8,30}$/
+
+      if (!passwordRegex.test(password)) {
+        return {
+          success: false,
+          message:
+            'La contraseña debe tener entre 8 y 30 caracteres e incluir una mayúscula, una minúscula, un número y un símbolo.'
+        }
+      }
+
+      const newUser = await this.users.createUser({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: normalizedEmail,
+        password: createHash(password),
+        role: role?.toLowerCase() || 'user'
+      })
+
+      if (!newUser || !newUser._id) {
+        return { success: false, message: 'Error al crear el usuario en la base de datos' }
+      }
+
+      // 🧹 No se genera token aquí porque el registro requiere autenticación previa (ruta protegida)
+      const safeUser = {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        role: newUser.role
+      }
+
+      return {
+        success: true,
+        message: 'Usuario creado correctamente',
+        user: safeUser
+      }
     } catch (error) {
-      throw new Error('se produjo un error al crear un usuario nuevo', error.message)
+      console.error('Error en registerUser:', error)
+      throw new Error('Error interno al registrar usuario')
     }
   }
 
