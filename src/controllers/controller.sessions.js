@@ -4,16 +4,24 @@ const sessionsService = new SessionsService()
 
 export const loginUser = async (req, res) => {
   try {
-    // Passport coloca el usuario validado en req.user
+    // 🧠 Passport coloca el usuario validado en req.user
     if (!req.user) {
-      return res.status(401).json({ status: 'error', message: 'Credenciales inválidas' })
+      return res.status(401).json({
+        status: 'error',
+        message: 'Credenciales inválidas'
+      })
     }
 
-    const result = sessionsService.generateAuthResponse(req.user, res)
-    return res.status(result.status).json({
-      status: result.status === 200 ? 'success' : 'error',
-      message: result.message,
-      token: result.token ?? null
+    // 🔹 Genera token y mensaje
+    const result = await sessionsService.generateAuthResponse(req.user)
+
+    // ✅ Garantizamos un código HTTP válido
+    const status = result?.status || 500
+
+    return res.status(status).json({
+      status: status === 200 ? 'success' : 'error',
+      message: result?.message || 'Error al generar autenticación',
+      token: result?.token ?? null
     })
   } catch (error) {
     console.error('controller.sessions.loginUser error:', error)

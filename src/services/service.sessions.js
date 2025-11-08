@@ -11,9 +11,10 @@ class SessionsService {
    * @param {import('express').Response} res - Response para setear cookie
    * @returns {{status:number, message:string, token?:string}}
    */
-  async generateAuthResponse(user, res) {
+
+  async generateAuthResponse(user) {
     try {
-      // Payload mínimo y seguro (sin password ni datos sensibles) == dto
+      // 🎯 Armamos el payload (DTO seguro)
       const payload = {
         id: user._id,
         firstName: user.firstName,
@@ -22,18 +23,12 @@ class SessionsService {
         role: user.role
       }
 
-      const token = jwt.sign({ user: payload }, env.jwt.privateKey /* config.jwt.privateKey */, {
+      // 🔐 Generar token JWT
+      const token = jwt.sign({ user: payload }, env.jwt.privateKey, {
         expiresIn: env.jwt.expiresIn
       })
 
-      // Seteamos cookie httpOnly para escenarios donde prefieras cookies
-      res.cookie(env.cookie.name, token, {
-        httpOnly: true,
-        sameSite: env.cookie.sameSite,
-        maxAge: env.cookie.maxAge,
-        secure: env.cookie.secure // true en producción (HTTPS), false en dev
-      })
-
+      // ✅ Retornar solo datos (sin modificar res)
       return {
         status: 200,
         message: 'Usuario autenticado correctamente',
@@ -41,7 +36,10 @@ class SessionsService {
       }
     } catch (error) {
       console.error('SessionsService.generateAuthResponse error:', error)
-      throw { status: 500, message: 'Error al generar el token de autenticación' }
+      return {
+        status: 500,
+        message: 'Error al generar el token de autenticación'
+      }
     }
   }
 
