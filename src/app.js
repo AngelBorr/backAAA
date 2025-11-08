@@ -32,7 +32,7 @@ const app = express()
 //config cors
 app.use(
   cors({
-    origin: ['https://www.asociacionargentinadearbitros.com.ar'],
+    origin: ['https://asociacionargentinadearbitros.com.ar'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
