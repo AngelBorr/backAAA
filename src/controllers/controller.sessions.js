@@ -9,7 +9,7 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'Credenciales inválidas' })
     }
 
-    const result = await sessionsService.generateAuthResponse(req.user, res)
+    const result = sessionsService.generateAuthResponse(req.user, res)
     return res.status(result.status).json({
       status: result.status === 200 ? 'success' : 'error',
       message: result.message,
