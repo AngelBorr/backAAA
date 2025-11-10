@@ -59,7 +59,7 @@ const initializePassport = () => {
               password: createHash(password),
               role
             }
-            const newUser = await usersService.createUser(user)
+            const newUser = await usersService.registerUser(user)
             if (newUser) {
               return done(null, newUser)
             } else {

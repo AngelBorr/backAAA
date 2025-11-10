@@ -42,68 +42,6 @@ export const registerUser = async (req, res) => {
   }
 }
 
-// 🧩 Login de usuario
-export const loginUser = async (req, res) => {
-  if (!req.user) {
-    const { firstName, lastName, email, password, role } = req.user
-    if (!firstName || !lastName || !email || !password || !role) {
-      //req.logger.error('Se producjo un error al verificar el usuario, credenciales invalidas')
-      CustomError.createError({
-        name: 'User Creation Error',
-        cause: generateUserErrorInfo({
-          firstName,
-          lastName,
-          email,
-          age,
-          password,
-          birth_date,
-          role
-        }),
-        code: EErrors.INVALID_TYPES_ERROR,
-        message: 'Error in the credentials User'
-      })
-    }
-    console.log('controller', req.user)
-    //req.logger.fatal('Las credenciales ingresados son invalidas')
-    return res.status(400).send({ status: 'Error', error: 'Credenciales Invalidas' })
-  }
-  console.log('Login Strategy', req.user)
-  req.session.user = {
-    name: `${req.user.firstName} ${req.user.lastName}`,
-    email: req.user.email,
-    age: req.user.age,
-    role: req.user.role
-  }
-  //req.logger.info('Session Iniciada, usuario: ' + req.user)
-  return res
-    .cookie('cookieToken', req.authInfo, { httpOnly: true })
-    .send({ status: 'usuario autenticado', message: 'cookie set', payload: req.authInfo })
-}
-
-export const failLogin = async (req, res) => {
-  //req.logger.error('Fallo al Logearse, credenciales invalidas')
-  res.send({ error: 'Fallo al Logearse' })
-}
-
-export const logoutSession = async (req, res) => {
-  try {
-    req.session.destroy((error) => {
-      if (!error) {
-        req.logger.info('Session Finalizada' + req.user)
-        res.status(200).send('Session eliminada')
-      } else {
-        req.logger.error('Se produjo un error al eliminar la session')
-        res.status(400).send({ status: 'Error al eliminar la session', body: error })
-      }
-    })
-  } catch (error) {
-    req.logger.error('Se produjo un error al Obtener los datos para la finalizacion de la Session')
-    return res
-      .status(500)
-      .json('Se produjo un error al que obtener los datos para eliminar la session', error.message)
-  }
-}
-
 export const resetPassword = async (req, res) => {
   try {
     const { token, newpassword, confirmNewPassword } = req.body
@@ -175,12 +113,6 @@ export const resetPassword = async (req, res) => {
     }
     
 } */
-
-//current
-export const usersCurrent = async (req, res, next) => {
-  const user = new UserDTO(req.user)
-  res.send(user)
-}
 
 //update role user
 export const updateRole = async (req, res) => {
