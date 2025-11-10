@@ -7,14 +7,9 @@ const usersService = new UsersService()
 class SessionsService {
   /**
    * Genera token JWT, setea cookie httpOnly y retorna respuesta uniforme.
-   * @param {Object} user - Documento de usuario (de Mongoose) ya validado por Passport
-   * @param {import('express').Response} res - Response para setear cookie
-   * @returns {{status:number, message:string, token?:string}}
    */
-
-  async generateAuthResponse(user) {
+  async generateAuthResponse(user, res) {
     try {
-      // 🎯 Armamos el payload (DTO seguro)
       const payload = {
         id: user._id,
         firstName: user.firstName,
@@ -23,12 +18,18 @@ class SessionsService {
         role: user.role
       }
 
-      // 🔐 Generar token JWT
       const token = jwt.sign({ user: payload }, env.jwt.privateKey, {
         expiresIn: env.jwt.expiresIn
       })
 
-      // ✅ Retornar solo datos (sin modificar res)
+      // ✅ Establecer cookie HttpOnly (fallback seguro)
+      res.cookie(env.cookie.name, token, {
+        httpOnly: true,
+        secure: env.cookie.secure, // true en producción
+        sameSite: env.cookie.sameSite, // "lax" recomendado
+        maxAge: env.cookie.maxAge
+      })
+
       return {
         status: 200,
         message: 'Usuario autenticado correctamente',
@@ -43,7 +44,6 @@ class SessionsService {
     }
   }
 
-  // 👤 Obtiene los datos actuales del usuario autenticado
   async getCurrentUser(user) {
     try {
       if (!user?.email) {
@@ -52,40 +52,39 @@ class SessionsService {
 
       const dbUser = await usersService.getUser(user.email)
       if (!dbUser) {
-        return { status: 404, message: 'Usuario no encontrado o eliminado' }
+        return { status: 404, message: 'Usuario no encontrado' }
       }
-      // Retorna información segura (sin password ni datos sensibles)
-      const safeUser = {
-        id: dbUser._id,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-        email: dbUser.email,
-        role: dbUser.role
+
+      return {
+        status: 200,
+        message: 'Usuario autenticado correctamente',
+        user: {
+          id: dbUser._id,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          email: dbUser.email,
+          role: dbUser.role
+        }
       }
-      return { status: 200, message: 'Usuario autenticado correctamente', user: safeUser }
     } catch (error) {
       console.error('SessionsService.getCurrentUser error:', error)
-      throw { status: 500, message: 'Error al obtener la información del usuario actual' }
+      return { status: 500, message: 'Error al obtener datos del usuario' }
     }
   }
 
-  // 🚪 Logout (solo registro o validación)
   async logoutUser(user) {
     try {
       if (!user?.email) {
         return { status: 400, message: 'Usuario inválido o no autenticado' }
       }
 
-      // Opcional: registrar logout en DB
-      // await usersService.updateLastLogout(user.email)
-
       return {
         status: 200,
-        message: `Logout exitoso para ${user.email}. El token debe eliminarse del cliente.`
+        message: `Logout exitoso para ${user.email}`
       }
     } catch (error) {
       console.error('SessionsService.logoutUser error:', error)
-      throw { status: 500, message: 'Error al cerrar sesión' }
+      return { status: 500, message: 'Error al cerrar sesión' }
     }
   }
 }

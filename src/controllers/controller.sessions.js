@@ -1,10 +1,10 @@
 import SessionsService from '../services/service.sessions.js'
+import env from '../config.js'
 
 const sessionsService = new SessionsService()
 
 export const loginUser = async (req, res) => {
   try {
-    // 🧠 Passport coloca el usuario validado en req.user
     if (!req.user) {
       return res.status(401).json({
         status: 'error',
@@ -12,16 +12,15 @@ export const loginUser = async (req, res) => {
       })
     }
 
-    // 🔹 Genera token y mensaje
-    const result = await sessionsService.generateAuthResponse(req.user)
+    // ✅ ahora sí pasamos res para setear cookie
+    const result = await sessionsService.generateAuthResponse(req.user, res)
 
-    // ✅ Garantizamos un código HTTP válido
-    const status = result?.status || 500
+    const status = result.status || 500
 
     return res.status(status).json({
       status: status === 200 ? 'success' : 'error',
-      message: result?.message || 'Error al generar autenticación',
-      token: result?.token ?? null
+      message: result.message,
+      token: result.token ?? null
     })
   } catch (error) {
     console.error('controller.sessions.loginUser error:', error)
@@ -33,16 +32,23 @@ export const loginUser = async (req, res) => {
 }
 
 export const failLogin = (req, res) => {
-  return res.status(401).json({ status: 'error', message: 'Fallo en autenticación de login' })
+  return res.status(401).json({ status: 'error', message: 'Fallo en autenticación' })
 }
 
 export const currentUser = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Usuario no autenticado'
+      })
+    }
+
     const result = await sessionsService.getCurrentUser(req.user)
     return res.status(result.status).json(result)
   } catch (error) {
     console.error('controller.sessions.currentUser error:', error)
-    res.status(error.status || 500).json({
+    return res.status(500).json({
       status: 'error',
       message: error.message || 'Error interno del servidor'
     })
@@ -51,11 +57,18 @@ export const currentUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
+    // ✅ limpiar cookie
+    res.clearCookie(env.cookie.name, {
+      httpOnly: true,
+      secure: env.cookie.secure,
+      sameSite: env.cookie.sameSite
+    })
+
     const result = await sessionsService.logoutUser(req.user)
     return res.status(result.status).json(result)
   } catch (error) {
     console.error('controller.sessions.logoutUser error:', error)
-    res.status(error.status || 500).json({
+    return res.status(500).json({
       status: 'error',
       message: error.message || 'Error interno al cerrar sesión'
     })
