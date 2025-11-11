@@ -32,8 +32,7 @@ class SessionsService {
 
       return {
         status: 200,
-        message: 'Usuario autenticado correctamente',
-        token
+        message: 'Usuario autenticado correctamente'
       }
     } catch (error) {
       console.error('SessionsService.generateAuthResponse error:', error)

@@ -19,8 +19,7 @@ export const loginUser = async (req, res) => {
 
     return res.status(status).json({
       status: status === 200 ? 'success' : 'error',
-      message: result.message,
-      token: result.token ?? null
+      message: result.message
     })
   } catch (error) {
     console.error('controller.sessions.loginUser error:', error)
