@@ -2,71 +2,74 @@ import jwt from 'jsonwebtoken'
 import env from '../config.js'
 
 /**
- * Middleware para controlar acceso basado en roles y JWT.
- * Ahora soporta:
- * ✅ Cookie httpOnly (jwtCookie)
- * ✅ Header Authorization como fallback
+ * Middleware para controlar acceso basado exclusivamente en JWT vía cookie httpOnly.
+ * ✅ SOLO Cookie
+ * ✅ Manejo de roles
+ * ✅ Manejo de token expirado / inválido
  */
 const handlePolicies = (policies) => (req, res, next) => {
   try {
     console.log('🔵 [handlePolicies] Ejecutando...')
 
-    // ✅1. acceso libre si la política es PUBLIC
+    // ✅ Caso 1 — Ruta pública
     if (policies[0]?.toUpperCase() === 'PUBLIC') {
-      console.log('🟢 Ruta pública → acceso autorizado')
+      console.log('🟢 Ruta pública → acceso automático')
       return next()
     }
 
-    // ✅2. Leer token desde cookie HttpOnly
-    let token = req.cookies?.jwtCookie
-
-    // ✅3. Fallback: si no hay cookie, intentar Authorization header
-    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-      console.log('⚠️ Usando Authorization header como fallback')
-      token = req.headers.authorization.split(' ')[1]
-    }
-
-    // ✅4. Si no hay token → no autorizado
+    // ✅ Caso 2 — Obtener token desde cookie httpOnly
+    const token = req.cookies?.jwtCookie
     if (!token) {
-      console.log('❌ No token found in cookie or header')
+      console.log('❌ No existe cookie jwtCookie')
       return res.status(401).json({
         status: 'error',
-        message: 'No autenticado. Token faltante o inválido.'
+        message: 'No autenticado. Cookie faltante.'
       })
     }
 
-    // ✅5. Verificar token
-    const decoded = jwt.verify(token, env.jwt.privateKey)
-    if (!decoded?.user) {
+    // ✅ Caso 3 — Verificar token
+    let decoded
+    try {
+      decoded = jwt.verify(token, env.jwt.privateKey)
+    } catch (err) {
+      console.log('❌ Error verificando JWT:', err.message)
       return res.status(401).json({
         status: 'error',
-        message: 'Token inválido o corrupto.'
+        message: 'Token inválido o expirado.'
+      })
+    }
+
+    if (!decoded?.user) {
+      console.log('❌ Token no contiene estructura válida')
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token corrupto.'
       })
     }
 
     console.log('✅ Token decodificado:', decoded.user)
 
-    // ✅6. Validar rol
+    // ✅ Caso 4 — Validar rol
     const userRole = decoded.user.role?.toUpperCase()
 
     if (!policies.includes(userRole)) {
-      console.log('❌ Permiso denegado: Rol no autorizado →', userRole)
+      console.log(`❌ Rol '${userRole}' no permitido → requiere: ${policies}`)
       return res.status(403).json({
         status: 'error',
         message: 'Acceso denegado. Rol no autorizado.'
       })
     }
 
-    // ✅7. Inyectar usuario en req para uso posterior
+    // ✅ Caso 5 — Inyectar usuario en req
     req.user = decoded.user
 
-    console.log('🟢 Permiso concedido a:', userRole)
+    console.log('🟢 Acceso concedido a:', userRole)
     next()
   } catch (error) {
     console.error('❌ Error en handlePolicies:', error)
     return res.status(401).json({
       status: 'error',
-      message: 'Token inválido o expirado.'
+      message: 'Error en autenticación.'
     })
   }
 }

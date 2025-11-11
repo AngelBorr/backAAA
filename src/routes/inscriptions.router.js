@@ -10,18 +10,18 @@ import MyOwnRouter from './router.js'
 export default class InscriptionsRouter extends MyOwnRouter {
   init() {
     // la ruta get debera traer todas las inscripciones
-    this.get('/', ['public'], getAllInscription)
+    this.get('/', ['ADMIN'], getAllInscription)
 
     // la ruta get debera traer una inscripcion por su id
-    this.get('/id/:id', ['public'], getInscriptionById)
+    this.get('/id/:id', ['ADMIN'], getInscriptionById)
 
     // la ruta get debera traer una inscripcion por su email
-    this.get('/email/:email', ['public'], getInscription)
+    this.get('/email/:email', ['ADMIN'], getInscription)
 
     // la ruta post  debera crear una nueva inscripcion
     this.post('/add', ['public'], addInscription)
 
     // la ruta delete debera eliminar una inscripcion por su id
-    this.delete('/:id', ['public'], deleteInscriptionById)
+    this.delete('/:id', ['ADMIN'], deleteInscriptionById)
   }
 }
