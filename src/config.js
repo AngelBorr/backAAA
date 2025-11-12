@@ -26,8 +26,8 @@ const env = {
   cookie: {
     name: process.env.COOKIE_NAME || 'cookieToken',
     maxAge: Number(process.env.cookie_MAX_AGE) || Number(process.env.COOKIE_MAX_AGE) || 3600000,
-    sameSite: process.env.COOKIE_SAME_SITE || 'strict',
-    secure: process.env.NODE_ENV === 'production'
+    sameSite: process.env.COOKIE_SAME_SITE || 'none',
+    secure: true
   },
 
   // 🔑 SESSION (opcional)
