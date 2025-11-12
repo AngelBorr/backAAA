@@ -85,26 +85,21 @@ class SessionsService {
   /**
    * 🚪 Cierre de sesión → limpia cookie y responde al cliente.
    */
-  async logoutUser(res, user) {
-    try {
-      res.clearCookie(env.cookie.name, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none'
-      })
 
+  async logoutUser(user) {
+    try {
       const email = user?.email || 'usuario desconocido'
       console.log(`👋 Logout exitoso para: ${email}`)
 
+      // El service solo devuelve información; no toca la cookie
       return {
-        status: 200,
+        success: true,
         message: `Logout exitoso para ${email}`
       }
     } catch (error) {
       console.error('❌ SessionsService.logoutUser error:', error)
-      return { status: 500, message: 'Error al cerrar sesión' }
+      throw new Error('Error interno al cerrar sesión')
     }
   }
 }
-
 export default SessionsService

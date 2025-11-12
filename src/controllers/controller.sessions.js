@@ -38,15 +38,26 @@ export const currentUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
+    const result = await sessionsService.logoutUser(req.user)
+
+    // ✅ Aquí sí se borra la cookie JWT
     res.clearCookie(env.cookie.name, {
       httpOnly: true,
       secure: env.cookie.secure,
       sameSite: env.cookie.sameSite
     })
-    const result = await sessionsService.logoutUser(req.user)
-    return res.status(result.status).json(result)
+
+    console.log('✅ Cookie JWT eliminada correctamente')
+
+    return res.status(200).json({
+      status: 'success',
+      message: result.message
+    })
   } catch (error) {
     console.error('controller.sessions.logoutUser error:', error)
-    return res.status(500).json({ status: 'error', message: 'Error interno al cerrar sesión' })
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error al cerrar sesión'
+    })
   }
 }
