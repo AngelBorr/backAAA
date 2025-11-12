@@ -16,7 +16,7 @@ export default class InscriptionsRouter extends MyOwnRouter {
     this.get('/id/:id', ['ADMIN'], getInscriptionById)
 
     // la ruta get debera traer una inscripcion por su email
-    this.get('/email/:email', ['public'], getInscription)
+    this.get('/email/:email', ['ADMIN'], getInscription)
 
     // la ruta post  debera crear una nueva inscripcion
     this.post('/add', ['public'], addInscription)
