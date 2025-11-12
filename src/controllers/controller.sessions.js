@@ -6,70 +6,47 @@ const sessionsService = new SessionsService()
 export const loginUser = async (req, res) => {
   try {
     if (!req.user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Credenciales inválidas'
-      })
+      return res.status(401).json({ status: 'error', message: 'Credenciales inválidas' })
     }
 
-    // ✅ ahora sí pasamos res para setear cookie
     const result = await sessionsService.generateAuthResponse(req.user, res)
-
-    const status = result.status || 500
-
-    return res.status(status).json({
-      status: status === 200 ? 'success' : 'error',
+    return res.status(result.status).json({
+      status: result.status === 200 ? 'success' : 'error',
       message: result.message
     })
   } catch (error) {
     console.error('controller.sessions.loginUser error:', error)
-    return res.status(error.status || 500).json({
-      status: 'error',
-      message: error.message || 'Error interno del servidor'
-    })
+    return res.status(500).json({ status: 'error', message: 'Error interno del servidor' })
   }
 }
 
-export const failLogin = (req, res) => {
-  return res.status(401).json({ status: 'error', message: 'Fallo en autenticación' })
-}
+export const failLogin = (_, res) =>
+  res.status(401).json({ status: 'error', message: 'Fallo en autenticación' })
 
 export const currentUser = async (req, res) => {
   try {
     if (!req.user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Usuario no autenticado'
-      })
+      return res.status(401).json({ status: 'error', message: 'Usuario no autenticado' })
     }
-
     const result = await sessionsService.getCurrentUser(req.user)
     return res.status(result.status).json(result)
   } catch (error) {
     console.error('controller.sessions.currentUser error:', error)
-    return res.status(500).json({
-      status: 'error',
-      message: error.message || 'Error interno del servidor'
-    })
+    return res.status(500).json({ status: 'error', message: 'Error interno del servidor' })
   }
 }
 
 export const logoutUser = async (req, res) => {
   try {
-    // ✅ limpiar cookie
     res.clearCookie(env.cookie.name, {
       httpOnly: true,
       secure: env.cookie.secure,
       sameSite: env.cookie.sameSite
     })
-
     const result = await sessionsService.logoutUser(req.user)
     return res.status(result.status).json(result)
   } catch (error) {
     console.error('controller.sessions.logoutUser error:', error)
-    return res.status(500).json({
-      status: 'error',
-      message: error.message || 'Error interno al cerrar sesión'
-    })
+    return res.status(500).json({ status: 'error', message: 'Error interno al cerrar sesión' })
   }
 }

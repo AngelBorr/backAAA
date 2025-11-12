@@ -1,16 +1,13 @@
 import jwt from 'jsonwebtoken'
 import env from '../config.js'
-import UsersService from '../services/service.users.js'
+import UsersService from './service.users.js'
 
 const usersService = new UsersService()
 
 class SessionsService {
-  /**
-   * Genera token JWT, setea cookie httpOnly y retorna respuesta uniforme.
-   */
   async generateAuthResponse(user, res) {
     try {
-      const payload = {
+      const safeUser = {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -18,41 +15,30 @@ class SessionsService {
         role: user.role
       }
 
-      const token = jwt.sign({ user: payload }, env.jwt.privateKey, {
-        expiresIn: env.jwt.expiresIn
+      const token = jwt.sign({ user: safeUser }, env.jwt.privateKey, {
+        expiresIn: env.jwt.expiresIn // ✅ usa JWT_PRIVATE_KEY
       })
 
-      // ✅ Establecer cookie HttpOnly (fallback seguro)
       res.cookie(env.cookie.name, token, {
         httpOnly: true,
-        secure: env.cookie.secure, // true en producción
-        sameSite: env.cookie.sameSite, // "lax" recomendado
+        sameSite: env.cookie.sameSite,
+        secure: env.cookie.secure,
         maxAge: env.cookie.maxAge
       })
 
-      return {
-        status: 200,
-        message: 'Usuario autenticado correctamente'
-      }
+      return { status: 200, message: 'Usuario autenticado correctamente' }
     } catch (error) {
       console.error('SessionsService.generateAuthResponse error:', error)
-      return {
-        status: 500,
-        message: 'Error al generar el token de autenticación'
-      }
+      return { status: 500, message: 'Error al generar el token de autenticación' }
     }
   }
 
   async getCurrentUser(user) {
     try {
-      if (!user?.email) {
-        return { status: 400, message: 'Datos de usuario inválidos en el token' }
-      }
+      if (!user?.email) return { status: 400, message: 'Token inválido o corrupto' }
 
       const dbUser = await usersService.getUser(user.email)
-      if (!dbUser) {
-        return { status: 404, message: 'Usuario no encontrado' }
-      }
+      if (!dbUser) return { status: 404, message: 'Usuario no encontrado' }
 
       return {
         status: 200,
@@ -73,14 +59,8 @@ class SessionsService {
 
   async logoutUser(user) {
     try {
-      if (!user?.email) {
-        return { status: 400, message: 'Usuario inválido o no autenticado' }
-      }
-
-      return {
-        status: 200,
-        message: `Logout exitoso para ${user.email}`
-      }
+      if (!user?.email) return { status: 400, message: 'Usuario inválido o no autenticado' }
+      return { status: 200, message: `Logout exitoso para ${user.email}` }
     } catch (error) {
       console.error('SessionsService.logoutUser error:', error)
       return { status: 500, message: 'Error al cerrar sesión' }
