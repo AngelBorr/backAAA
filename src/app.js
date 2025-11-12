@@ -1,127 +1,76 @@
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import displayRoutes from 'express-routemap'
 import mongoose from 'mongoose'
 import env from './config.js'
+import passport from 'passport'
+import initializePassport from './config/passport.config.js'
+import { GridFSBucket } from 'mongodb'
+
+// Routers
 import UsersRouter from './routes/users.router.js'
 import SessionsRouter from './routes/sessions.router.js'
-import initializePassport from './config/passport.config.js'
-import passport from 'passport'
-import session from 'express-session'
-import MongoStore from 'connect-mongo'
 import StudentRouter from './routes/student.router.js'
-import { GridFSBucket } from 'mongodb'
 import FilesRouter from './routes/files.router.js'
 import InscriptionsRouter from './routes/inscriptions.router.js'
 
-//routes
-const usersRouter = new UsersRouter()
-const sessionsRouter = new SessionsRouter()
-const studentsRouter = new StudentRouter()
-const filesRouter = new FilesRouter()
-const inscriptionsRouter = new InscriptionsRouter()
-
-//ruta mongo atlas
-const rutaMongo = env.mongo.url
-
-//data session
-const secret = env.session.secret
-
+// Inicializar app
 const app = express()
 
-//config cors
+// 🧱 Middlewares base
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+// 🌐 Configuración CORS
 app.use(
   cors({
-    origin: ['https://asociacionargentinadearbitros.com.ar'],
-    credentials: true,
+    origin: [
+      'https://asociacionargentinadearbitros.com.ar',
+      'http://localhost:3000' // si probás local
+    ],
+    credentials: true, // ✅ Permite cookies cross-site
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
 
-//config express
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
-//configuracion Session
-app.use(
-  session({
-    store: new MongoStore({
-      mongoUrl: rutaMongo,
-      ttl: 3600
-    }),
-    secret: `${secret}`,
-    resave: false,
-    saveUninitialized: false
-  })
-)
-
-//configuracion passport
+// 🔐 Passport
 initializePassport()
 app.use(passport.initialize())
-app.use(passport.session())
 
-// ↓↓↓ CONFIGURACIÓN GRIDFS BUCKET GLOBAL ↓↓↓
-let gfsBucket
-
-app.use((req, res, next) => {
-  try {
-    if (!gfsBucket && mongoose.connection.readyState === 1) {
-      gfsBucket = new GridFSBucket(mongoose.connection.db, {
-        bucketName: 'studentFiles'
-      })
-      console.log('GridFSBucket inicializado correctamente')
-    }
-    req.gfsBucket = gfsBucket
-
-    next()
-  } catch (error) {
-    console.error('Error inicializando GridFSBucket:', error)
-    next(error)
-  }
-})
-
-// ↓↓↓ Middleware adicional para verificar conexión async (opcional) ↓↓↓
-app.use(async (req, res, next) => {
-  // Si el bucket no está inicializado pero MongoDB está conectado, inicializarlo
-  if (!req.gfsBucket && mongoose.connection.readyState === 1) {
-    try {
-      gfsBucket = new GridFSBucket(mongoose.connection.db, {
-        bucketName: 'studentFiles'
-      })
-      req.gfsBucket = gfsBucket
-      console.log('GridFSBucket inicializado en middleware async')
-    } catch (error) {
-      console.error('Error inicializando GridFSBucket en async:', error)
-    }
-  }
-  next()
-})
-
-//rutas
-app.use('/api/users', usersRouter.getRouter())
-app.use('/api/sessions', sessionsRouter.getRouter())
-app.use('/api/students', studentsRouter.getRouter())
-app.use('/api/files', filesRouter.getRouter())
-app.use('/api/inscriptions', inscriptionsRouter.getRouter())
-
-//server en puerto 8080
-const httpServer = app.listen(`${env.port}`, () => {
-  displayRoutes(app)
-  console.log(`servidor escuchando en el puerto ${env.port}`)
-})
-
-//conection a mongoose server
+// 🗄️ Conexión MongoDB
 mongoose
-  .connect(rutaMongo, {
+  .connect(env.mongo.url, {
     useNewUrlParser: true,
     useUnifiedTopology: true
   })
-  .then(async () => {
-    console.log('conectado a mongo')
-  })
-  .catch((err) => {
-    console.log('app.js', err.message)
-  })
+  .then(() => console.log('✅ Conectado a MongoDB'))
+  .catch((err) => console.error('❌ Error MongoDB:', err.message))
+
+// 📦 GridFS
+let gfsBucket
+app.use((req, res, next) => {
+  if (!gfsBucket && mongoose.connection.readyState === 1) {
+    gfsBucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'studentFiles' })
+    console.log('GridFSBucket inicializado correctamente')
+  }
+  req.gfsBucket = gfsBucket
+  next()
+})
+
+// 🚀 Rutas
+app.use('/api/users', new UsersRouter().getRouter())
+app.use('/api/sessions', new SessionsRouter().getRouter())
+app.use('/api/students', new StudentRouter().getRouter())
+app.use('/api/files', new FilesRouter().getRouter())
+app.use('/api/inscriptions', new InscriptionsRouter().getRouter())
+
+// 🧭 Servidor
+app.listen(env.port, () => {
+  displayRoutes(app)
+  console.log(`Servidor escuchando en puerto ${env.port}`)
+})
 
 export default app

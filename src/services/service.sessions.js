@@ -5,9 +5,14 @@ import UsersService from './service.users.js'
 const usersService = new UsersService()
 
 class SessionsService {
+  /**
+   * 🔐 Genera token JWT y setea cookie httpOnly segura.
+   * Se usa en /api/sessions/login luego de validar credenciales por Passport.
+   */
   async generateAuthResponse(user, res) {
     try {
-      const safeUser = {
+      // 1️⃣ Construir el payload (sin password)
+      const payload = {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -15,54 +20,88 @@ class SessionsService {
         role: user.role
       }
 
-      const token = jwt.sign({ user: safeUser }, env.jwt.privateKey, {
-        expiresIn: env.jwt.expiresIn // ✅ usa JWT_PRIVATE_KEY
+      // 2️⃣ Generar JWT con clave privada del entorno
+      const token = jwt.sign({ user: payload }, env.jwt.privateKey, {
+        expiresIn: env.jwt.expiresIn
       })
 
+      // 3️⃣ Establecer cookie httpOnly segura (compatible con cross-site)
       res.cookie(env.cookie.name, token, {
-        httpOnly: true,
-        sameSite: env.cookie.sameSite,
-        secure: env.cookie.secure,
-        maxAge: env.cookie.maxAge
+        httpOnly: true, // No accesible desde JS → protege contra XSS
+        secure: true, // Requiere HTTPS → obligatorio para SameSite=None
+        sameSite: 'none', // Permite compartir cookie entre dominios (Railway + Vercel)
+        maxAge: env.cookie.maxAge // Duración (ms)
       })
 
-      return { status: 200, message: 'Usuario autenticado correctamente' }
+      console.log('✅ Cookie JWT seteada correctamente:', env.cookie.name)
+
+      return {
+        status: 200,
+        message: 'Usuario autenticado correctamente'
+      }
     } catch (error) {
-      console.error('SessionsService.generateAuthResponse error:', error)
-      return { status: 500, message: 'Error al generar el token de autenticación' }
+      console.error('❌ SessionsService.generateAuthResponse error:', error)
+      return {
+        status: 500,
+        message: 'Error al generar el token de autenticación'
+      }
     }
   }
 
+  /**
+   * 👤 Retorna los datos del usuario autenticado según el token JWT.
+   * El middleware handlePolicies inyecta req.user si el token es válido.
+   */
   async getCurrentUser(user) {
     try {
-      if (!user?.email) return { status: 400, message: 'Token inválido o corrupto' }
+      if (!user?.email) {
+        return { status: 400, message: 'Datos de usuario inválidos en el token' }
+      }
 
       const dbUser = await usersService.getUser(user.email)
-      if (!dbUser) return { status: 404, message: 'Usuario no encontrado' }
+      if (!dbUser) {
+        return { status: 404, message: 'Usuario no encontrado' }
+      }
+
+      const safeUser = {
+        id: dbUser._id,
+        firstName: dbUser.firstName,
+        lastName: dbUser.lastName,
+        email: dbUser.email,
+        role: dbUser.role
+      }
 
       return {
         status: 200,
         message: 'Usuario autenticado correctamente',
-        user: {
-          id: dbUser._id,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName,
-          email: dbUser.email,
-          role: dbUser.role
-        }
+        user: safeUser
       }
     } catch (error) {
-      console.error('SessionsService.getCurrentUser error:', error)
+      console.error('❌ SessionsService.getCurrentUser error:', error)
       return { status: 500, message: 'Error al obtener datos del usuario' }
     }
   }
 
-  async logoutUser(user) {
+  /**
+   * 🚪 Cierre de sesión → limpia cookie y responde al cliente.
+   */
+  async logoutUser(res, user) {
     try {
-      if (!user?.email) return { status: 400, message: 'Usuario inválido o no autenticado' }
-      return { status: 200, message: `Logout exitoso para ${user.email}` }
+      res.clearCookie(env.cookie.name, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'
+      })
+
+      const email = user?.email || 'usuario desconocido'
+      console.log(`👋 Logout exitoso para: ${email}`)
+
+      return {
+        status: 200,
+        message: `Logout exitoso para ${email}`
+      }
     } catch (error) {
-      console.error('SessionsService.logoutUser error:', error)
+      console.error('❌ SessionsService.logoutUser error:', error)
       return { status: 500, message: 'Error al cerrar sesión' }
     }
   }
