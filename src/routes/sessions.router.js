@@ -19,7 +19,10 @@ export default class SessionsRouter extends MyOwnRouter {
     this.post(
       '/login',
       ['PUBLIC'],
-      passport.authenticate('login', { failureRedirect: '/api/sessions/failLogin' }),
+      passport.authenticate('login', {
+        session: false,
+        failureRedirect: '/api/sessions/failLogin'
+      }),
       loginUser
     )
 
