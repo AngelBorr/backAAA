@@ -1,6 +1,6 @@
 // src/services/emailLog.service.js
 import EmailLogManager from '../dao/managers/mongo/emailLog.mongo.js'
-import EmailLogModel from '../models/emailLog.model.js'
+import EmailLogModel from '../dao/models/emailLog.model.js'
 import { log, warn, error as logError, secureLog } from '../utils/logger.js'
 
 class EmailLogService {
