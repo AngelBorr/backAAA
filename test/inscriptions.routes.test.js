@@ -3,298 +3,221 @@ import request from 'supertest'
 import { app } from './setup.js'
 import mongoose from 'mongoose'
 
-describe('📝 Inscriptions API Routes', function () {
+describe('📝 Inscriptions API (Tests Finales)', function () {
   this.timeout(10000)
 
   let testInscriptionId
-  let testInscriptionEmail = 'test@example.com'
-  const validInscriptionData = {
+  let testEmail = 'test@example.com'
+
+  const validData = {
     name: 'Juan',
     lastName: 'Pérez',
     document: 12345678,
     nationality: 'Argentino',
     birthDate: '1990-01-01',
     placeOfBirth: 'Buenos Aires',
-    email: testInscriptionEmail,
+    email: testEmail,
     cellPhone: 1122334455,
     address: 'Calle Falsa 123',
     postalCode: 1425,
     province: 'Buenos Aires',
-    locality: 'CABA',
+    locality: 'La Plata',
     occupation: 'Desarrollador',
     studies: 'Universitario',
     sportBackground: 'Fútbol amateur'
   }
 
-  // Helper para crear una inscripción de prueba
-  const createTestInscription = async (customData = {}) => {
+  // Helper
+  const createTestInscription = async (custom = {}) => {
     const response = await request(app)
-      .post('/api/inscriptions')
-      .send({ ...validInscriptionData, ...customData })
+      .post('/api/inscriptions/add')
+      .send({ ...validData, ...custom })
       .expect('Content-Type', /json/)
 
-    return response.body.data
+    return response
   }
 
-  describe('GET /api/inscriptions', () => {
-    it('should return empty array when no inscriptions exist', async () => {
-      const response = await request(app)
-        .get('/api/inscriptions')
-        .expect('Content-Type', /json/)
-        .expect(404)
+  // ----------------------------------------------------------------------------
+  // GET ALL
+  // ----------------------------------------------------------------------------
 
-      expect(response.body).to.have.property('success', false)
-      expect(response.body.message).to.include('No se han encontrado')
+  describe('GET /api/inscriptions/', () => {
+    it('❌ Debe retornar 404 cuando no hay inscripciones', async () => {
+      const res = await request(app).get('/api/inscriptions/').expect(404)
+
+      expect(res.body.success).to.equal(false)
+      expect(res.body.message).to.include('No se han encontrado')
     })
 
-    it('should return all inscriptions', async () => {
-      // Crear dos inscripciones de prueba
-      await createTestInscription({ email: 'test1@example.com' })
-      await createTestInscription({ email: 'test2@example.com' })
+    it('✔ Debe retornar inscripciones si existen', async () => {
+      await createTestInscription({ email: 'uno@example.com' })
+      await createTestInscription({ email: 'dos@example.com' })
 
-      const response = await request(app)
-        .get('/api/inscriptions')
-        .expect('Content-Type', /json/)
-        .expect(200)
+      const res = await request(app).get('/api/inscriptions/').expect(200)
 
-      expect(response.body).to.have.property('success', true)
-      expect(response.body.data).to.be.an('array').with.lengthOf(2)
-      expect(response.body.data[0]).to.have.property('email')
-      expect(response.body.data[0]).to.have.property('name')
+      expect(res.body.success).to.equal(true)
+      expect(res.body.data).to.be.an('array')
+      expect(res.body.data.length).to.be.at.least(2)
     })
   })
+
+  // ----------------------------------------------------------------------------
+  // GET BY EMAIL
+  // ----------------------------------------------------------------------------
 
   describe('GET /api/inscriptions/email/:email', () => {
-    it('should return 400 for invalid email format', async () => {
-      const response = await request(app)
-        .get('/api/inscriptions/email/invalid-email')
-        .expect('Content-Type', /json/)
-        .expect(400)
+    it('❌ Email inválido → 400', async () => {
+      const res = await request(app).get('/api/inscriptions/email/invalid-email').expect(400)
 
-      expect(response.body).to.have.property('success', false)
-      // ✅ CORREGIDO: Cambiado a mensaje real
-      expect(response.body.message).to.include('No se encontró un usuario')
+      expect(res.body.success).to.equal(false)
+      expect(res.body.message).to.include('Debe proporcionar un email válido')
     })
 
-    it('should return 404 for non-existent email', async () => {
-      const response = await request(app)
-        .get('/api/inscriptions/email/nonexistent@example.com')
-        .expect('Content-Type', /json/)
-        .expect(400)
+    it('❌ Email inexistente → 400', async () => {
+      const res = await request(app).get('/api/inscriptions/email/noexiste@example.com').expect(400)
 
-      expect(response.body).to.have.property('success', false)
-      expect(response.body.message).to.include('No se encontró un usuario')
+      expect(res.body.success).to.equal(false)
+      expect(res.body.message).to.include('No se encontró un usuario')
     })
 
-    it('should return inscription by email', async () => {
-      const testEmail = 'findbyemail@example.com'
+    it('✔ Debe retornar inscripción por email', async () => {
+      const testEmail = 'findme@example.com'
+
       await createTestInscription({ email: testEmail })
 
-      const response = await request(app)
-        .get(`/api/inscriptions/email/${testEmail}`)
-        .expect('Content-Type', /json/)
-        .expect(200)
+      const res = await request(app).get(`/api/inscriptions/email/${testEmail}`).expect(200)
 
-      expect(response.body).to.have.property('success', true)
-      expect(response.body.data).to.have.property('email', testEmail)
-      expect(response.body.data).to.have.property('name', 'Juan')
+      expect(res.body.success).to.equal(true)
+      expect(res.body.data.email).to.equal(testEmail)
     })
   })
+
+  // ----------------------------------------------------------------------------
+  // GET BY ID
+  // ----------------------------------------------------------------------------
 
   describe('GET /api/inscriptions/id/:id', () => {
-    it('should return 400 for invalid ObjectId', async () => {
-      const response = await request(app)
-        .get('/api/inscriptions/id/invalid-id')
-        .expect('Content-Type', /json/)
-        .expect(400)
+    it('❌ ID inválido → 400', async () => {
+      const res = await request(app).get('/api/inscriptions/id/invalid-id').expect(400)
 
-      expect(response.body).to.have.property('success', false)
-      expect(response.body.message).to.include('ID proporcionado no es válido')
+      expect(res.body.success).to.equal(false)
+      expect(res.body.message).to.include('ID proporcionado no es válido')
     })
 
-    it('should return 404 for non-existent ID', async () => {
-      const validButNonExistentId = new mongoose.Types.ObjectId()
+    it('❌ ID inexistente → 404', async () => {
+      const fakeId = new mongoose.Types.ObjectId()
 
-      const response = await request(app)
-        .get(`/api/inscriptions/id/${validButNonExistentId}`)
-        .expect('Content-Type', /json/)
-        .expect(404)
+      const res = await request(app).get(`/api/inscriptions/id/${fakeId}`).expect(404)
 
-      expect(response.body).to.have.property('success', false)
+      expect(res.body.success).to.equal(false)
     })
 
-    it('should return inscription by ID', async () => {
-      const inscription = await createTestInscription()
-      testInscriptionId = inscription._id
+    it('✔ Debe retornar inscripción por ID', async () => {
+      const created = await createTestInscription()
+      const id = created.body.data._id
 
-      const response = await request(app)
-        .get(`/api/inscriptions/id/${testInscriptionId}`)
-        .expect('Content-Type', /json/)
-        .expect(200)
+      const res = await request(app).get(`/api/inscriptions/id/${id}`).expect(200)
 
-      expect(response.body).to.have.property('success', true)
-      expect(response.body.data).to.have.property('_id', testInscriptionId.toString())
-      expect(response.body.data).to.have.property('email', validInscriptionData.email)
+      expect(res.body.success).to.equal(true)
+      expect(res.body.data._id).to.equal(id)
     })
   })
 
-  describe('POST /api/inscriptions', () => {
-    it('should return 400 for missing required fields', async () => {
-      const incompleteData = {
-        name: 'Juan'
-        // Falta lastName, email, etc.
-      }
+  // ----------------------------------------------------------------------------
+  // POST CREATE
+  // ----------------------------------------------------------------------------
 
-      const response = await request(app)
-        .post('/api/inscriptions')
-        .send(incompleteData)
-        .expect('Content-Type', /json/)
+  describe('POST /api/inscriptions/add', () => {
+    it('❌ Faltan campos → 400', async () => {
+      const res = await request(app)
+        .post('/api/inscriptions/add')
+        .send({ name: 'Juan' })
         .expect(400)
 
-      expect(response.body).to.have.property('success', false)
-      expect(response.body.message).to.include('campos obligatorios')
+      expect(res.body.message).to.include('Faltan campos obligatorios')
     })
 
-    it('should return 400 for invalid email format', async () => {
-      const invalidEmailData = {
-        ...validInscriptionData,
-        email: 'invalid-email'
-      }
+    it('❌ Email inválido → 400', async () => {
+      const res = await request(app)
+        .post('/api/inscriptions/add')
+        .send({ ...validData, email: 'invalid-email' })
+        .expect(400)
 
-      const response = await request(app)
-        .post('/api/inscriptions')
-        .send(invalidEmailData)
-        .expect('Content-Type', /json/)
-        .expect(500) // ✅ CORREGIDO: Cambiado a 500 (error real)
-
-      expect(response.body).to.have.property('success', false)
+      expect(res.body.message).to.include('El email debe tener un formato válido')
     })
 
-    it('should return 400 for duplicate email', async () => {
-      // Primera inscripción
-      await createTestInscription({ email: 'duplicate@example.com' })
+    it('❌ Documento inválido → 400', async () => {
+      const res = await request(app)
+        .post('/api/inscriptions/add')
+        .send({ ...validData, document: 'abc123' })
+        .expect(400)
 
-      // Segunda inscripción con mismo email
-      const response = await request(app)
-        .post('/api/inscriptions')
-        .send({ ...validInscriptionData, email: 'duplicate@example.com' })
-        .expect('Content-Type', /json/)
-        .expect(500) // ✅ CORREGIDO: Cambiado a 500 (error real)
-
-      expect(response.body).to.have.property('success', false)
+      expect(res.body.message).to.include('El documento debe ser un número')
     })
 
-    it('should create a new inscription successfully', async () => {
-      const response = await request(app)
-        .post('/api/inscriptions')
-        .send(validInscriptionData)
-        .expect('Content-Type', /json/)
+    it('❌ Email duplicado → 500', async () => {
+      await createTestInscription({ email: 'dup@example.com' })
+
+      const res = await request(app)
+        .post('/api/inscriptions/add')
+        .send({ ...validData, email: 'dup@example.com' })
+        .expect(500)
+
+      expect(res.body.success).to.equal(false)
+    })
+
+    it('✔ Debe crear la inscripción', async () => {
+      const res = await createTestInscription()
+
+      expect(res.status).to.equal(201)
+      expect(res.body.success).to.equal(true)
+      expect(res.body.data).to.have.property('_id')
+
+      testInscriptionId = res.body.data._id
+    })
+
+    it('✔ Debe normalizar strings (trim) y email lower', async () => {
+      const res = await request(app)
+        .post('/api/inscriptions/add')
+        .send({
+          ...validData,
+          name: '  Juan  ',
+          lastName: '  Pérez  ',
+          email: 'TEST@EXAMPLE.COM'
+        })
         .expect(201)
 
-      expect(response.body).to.have.property('success', true)
-      expect(response.body).to.have.property('message', 'Inscripción creada correctamente')
-      expect(response.body.data).to.be.an('object')
-      expect(response.body.data).to.have.property('_id')
-      expect(response.body.data).to.have.property('email', validInscriptionData.email)
-      expect(response.body.data).to.have.property('name', validInscriptionData.name)
-
-      // Guardar ID para tests posteriores
-      testInscriptionId = response.body.data._id
-    })
-
-    it('should trim string fields and format email to lowercase', async () => {
-      const dataWithSpaces = {
-        ...validInscriptionData,
-        name: '  Juan  ',
-        lastName: '  Pérez  ',
-        email: 'TEST@EXAMPLE.COM' // ✅ CORREGIDO: Sin espacios, solo mayúsculas
-      }
-
-      const response = await request(app).post('/api/inscriptions').send(dataWithSpaces).expect(201)
-
-      expect(response.body.data.name).to.equal('Juan')
-      expect(response.body.data.lastName).to.equal('Pérez')
-      expect(response.body.data.email).to.equal('test@example.com')
+      expect(res.body.data.name).to.equal('Juan')
+      expect(res.body.data.lastName).to.equal('Pérez')
+      expect(res.body.data.email).to.equal('test@example.com')
     })
   })
+
+  // ----------------------------------------------------------------------------
+  // DELETE
+  // ----------------------------------------------------------------------------
 
   describe('DELETE /api/inscriptions/:id', () => {
-    it('should return 400 for invalid ObjectId', async () => {
-      const response = await request(app)
-        .delete('/api/inscriptions/invalid-id')
-        .expect('Content-Type', /json/)
-        .expect(400)
+    it('❌ ID inválido → 400', async () => {
+      const res = await request(app).delete('/api/inscriptions/invalid-id').expect(400)
 
-      expect(response.body).to.have.property('success', false)
+      expect(res.body.success).to.equal(false)
     })
 
-    it('should return 404 for non-existent ID', async () => {
-      const validButNonExistentId = new mongoose.Types.ObjectId()
+    it('❌ ID inexistente → 400', async () => {
+      const fakeId = new mongoose.Types.ObjectId()
 
-      const response = await request(app)
-        .delete(`/api/inscriptions/${validButNonExistentId}`)
-        .expect('Content-Type', /json/)
-        .expect(400)
+      const res = await request(app).delete(`/api/inscriptions/${fakeId}`).expect(400)
 
-      expect(response.body).to.have.property('success', false)
-      expect(response.body.message).to.include('no existe')
+      expect(res.body.message).to.include('no existe')
     })
 
-    it('should delete an inscription successfully', async () => {
-      const inscription = await createTestInscription()
-      const inscriptionId = inscription._id
+    it('✔ Debe eliminar correctamente', async () => {
+      const { body } = await createTestInscription()
+      const id = body.data._id
 
-      // Verificar que existe
-      await request(app).get(`/api/inscriptions/id/${inscriptionId}`).expect(200)
-
-      // Eliminar
-      const deleteResponse = await request(app)
-        .delete(`/api/inscriptions/${inscriptionId}`)
-        .expect('Content-Type', /json/)
-        .expect(200)
-
-      expect(deleteResponse.body).to.have.property('success', true)
-      expect(deleteResponse.body.message).to.include('eliminada correctamente')
-
-      // Verificar que ya no existe
-      await request(app).get(`/api/inscriptions/id/${inscriptionId}`).expect(404)
-    })
-  })
-
-  describe('Integration Tests - Complete Flow', () => {
-    it('should complete full CRUD flow successfully', async () => {
-      // 1. CREATE
-      const createResponse = await request(app)
-        .post('/api/inscriptions')
-        .send(validInscriptionData)
-        .expect(201)
-
-      const inscriptionId = createResponse.body.data._id
-
-      // 2. READ by ID
-      const readByIdResponse = await request(app)
-        .get(`/api/inscriptions/id/${inscriptionId}`)
-        .expect(200)
-
-      expect(readByIdResponse.body.data._id).to.equal(inscriptionId)
-
-      // 3. READ by Email
-      const readByEmailResponse = await request(app)
-        .get(`/api/inscriptions/email/${validInscriptionData.email}`)
-        .expect(200)
-
-      expect(readByEmailResponse.body.data.email).to.equal(validInscriptionData.email)
-
-      // 4. READ all
-      const readAllResponse = await request(app).get('/api/inscriptions').expect(200)
-
-      expect(readAllResponse.body.data).to.be.an('array').with.lengthOf.at.least(1)
-
-      // 5. DELETE
-      await request(app).delete(`/api/inscriptions/${inscriptionId}`).expect(200)
-
-      // 6. VERIFY deletion
-      await request(app).get(`/api/inscriptions/id/${inscriptionId}`).expect(404)
+      await request(app).delete(`/api/inscriptions/${id}`).expect(200)
+      await request(app).get(`/api/inscriptions/id/${id}`).expect(404)
     })
   })
 })

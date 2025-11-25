@@ -1,69 +1,93 @@
+// src/dao/managers/mongo/usersInscription.mongo.js
 import userInscriptionModel from '../../models/userInscription.models.js'
-import mongoose from 'mongoose'
+import { log, warn, error as logError } from '../../../utils/logger.js'
 
 class UsersInscriptionManager {
   constructor() {
     this.model = userInscriptionModel
   }
 
+  /* -------------------------------------------------------------
+     📌 GET ALL
+  ------------------------------------------------------------- */
   async getAllInscription() {
+    log('📥 DAO → getAllInscription')
     try {
       return await this.model.find().lean()
     } catch (error) {
-      console.error('Error en getAllInscription (DAO):', error)
-      throw new Error('Error al obtener las inscripciones desde la base de datos')
+      logError('❌ DAO: error en getAllInscription:', error)
+      throw error
     }
   }
 
+  /* -------------------------------------------------------------
+     📌 GET BY EMAIL
+  ------------------------------------------------------------- */
   async getInscription(email) {
+    log(`📥 DAO → getInscription email=${email}`)
     try {
-      return await this.model.findOne({ email }).lean()
+      return await this.model.findOne({ email: email.toLowerCase() }).lean()
     } catch (error) {
-      console.error('Error en getInscription (DAO):', error)
-      throw new Error('Error al obtener la inscripción por email')
+      logError('❌ DAO: error en getInscription:', error)
+      throw error
     }
   }
 
+  /* -------------------------------------------------------------
+     📌 GET BY ID
+  ------------------------------------------------------------- */
   async getInscriptionId(id) {
+    log(`📥 DAO → getInscriptionId id=${id}`)
     try {
-      if (!mongoose.Types.ObjectId.isValid(id)) return null
       return await this.model.findById(id).lean()
     } catch (error) {
-      console.error('Error en getInscriptionId (DAO):', error)
-      throw new Error('Error al obtener la inscripción por ID')
+      logError('❌ DAO: error en getInscriptionId:', error)
+      throw error
     }
   }
 
+  /* -------------------------------------------------------------
+     📌 CREATE
+  ------------------------------------------------------------- */
   async createInscription(body) {
+    log('📤 DAO → createInscription')
     try {
-      return await this.model.create(body)
+      const created = await this.model.create(body)
+      log('✅ DAO: inscripción creada')
+      return created
     } catch (error) {
-      console.error('Error en createInscription (DAO):', error)
-      throw new Error('Error al crear la inscripción en la base de datos')
+      logError('❌ DAO: error en createInscription:', error)
+
+      // Reenviamos código RAW para que el Service pueda distinguir
+      throw error
     }
   }
 
+  /* -------------------------------------------------------------
+     📌 UPDATE
+  ------------------------------------------------------------- */
   async updateInscription(id, bodyUpdate) {
+    log(`📤 DAO → updateInscription id=${id}`)
     try {
-      if (!mongoose.Types.ObjectId.isValid(id)) return null
-
       const result = await this.model.updateOne({ _id: id }, bodyUpdate)
-      return result.modifiedCount > 0 ? result : null
+      return result.modifiedCount > 0
     } catch (error) {
-      console.error('Error en updateInscription (DAO):', error)
-      throw new Error('Error al actualizar la inscripción')
+      logError('❌ DAO: error en updateInscription:', error)
+      throw error
     }
   }
 
+  /* -------------------------------------------------------------
+     📌 DELETE
+  ------------------------------------------------------------- */
   async deleteInscription(id) {
+    warn(`🗑 DAO → deleteInscription id=${id}`)
     try {
-      if (!mongoose.Types.ObjectId.isValid(id)) return null
-
       const result = await this.model.deleteOne({ _id: id })
       return result.deletedCount > 0
     } catch (error) {
-      console.error('Error en deleteInscription (DAO):', error)
-      throw new Error('Error al eliminar la inscripción')
+      logError('❌ DAO: error en deleteInscription:', error)
+      throw error
     }
   }
 }

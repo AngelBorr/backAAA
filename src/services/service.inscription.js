@@ -1,57 +1,91 @@
+// src/services/service.inscription.js
 import UsersInscriptionManager from '../dao/managers/mongo/usersInscription.mongo.js'
 import mongoose from 'mongoose'
+import { log, warn, error as logError, secureLog } from '../utils/logger.js'
+/* import MailingService from './service.mailing.js'
+
+const mailingService = new MailingService() */
+
+// 🔄 MailingService se inyecta desde app.js o tests
+let mailingService = null
+export function injectMailingService(service) {
+  mailingService = service
+}
 
 class UsersInscriptionService {
   constructor() {
     this.usersInscription = new UsersInscriptionManager()
   }
 
-  // ✅ Obtener todas las inscripciones
-  async getAllUsersInscription() {
-    const inscriptions = await this.usersInscription.getAllInscription()
-    if (!inscriptions || inscriptions.length === 0) {
-      throw new Error('No se han encontrado usuarios inscriptos')
-    }
-    return inscriptions
+  /* -------------------------------------------------------------
+     🔍 Helper globales para validar
+  ------------------------------------------------------------- */
+  isEmail(str) {
+    return /^\S+@\S+\.\S+$/.test(str)
   }
 
-  // ✅ Obtener inscripción por email
-  async getUserInscription(email) {
-    if (!email || typeof email !== 'string') {
-      throw new Error('Debe proporcionar un email válido')
+  isNumeric(value) {
+    return /^[0-9]+$/.test(String(value))
+  }
+
+  /* -------------------------------------------------------------
+     📌 GET ALL
+  ------------------------------------------------------------- */
+  async getAllUsersInscription() {
+    log('📥 Service → getAllUsersInscription')
+
+    const data = await this.usersInscription.getAllInscription()
+
+    if (!data || data.length === 0) {
+      throw new Error('No se han encontrado usuarios inscriptos')
     }
 
-    const userInscription = await this.usersInscription.getInscription(email)
-    if (!userInscription) {
+    return data
+  }
+
+  /* -------------------------------------------------------------
+     📌 GET BY EMAIL
+  ------------------------------------------------------------- */
+  async getUserInscription(email) {
+    log(`📥 Service → getUserInscription email=${email}`)
+
+    if (!email || !this.isEmail(email)) {
+      throw new Error('Debe proporcionar un email válido') // FIX TEST
+    }
+
+    const user = await this.usersInscription.getInscription(email)
+
+    if (!user) {
       throw new Error('No se encontró un usuario con ese email')
     }
 
-    return userInscription
+    return user
   }
 
-  // ✅ Obtener inscripción por ID
+  /* -------------------------------------------------------------
+     📌 GET BY ID
+  ------------------------------------------------------------- */
   async getUserInscriptionById(id) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    log(`📥 Service → getUserInscriptionById id=${id}`)
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error('El ID proporcionado no es válido')
     }
 
-    const userInscription = await this.usersInscription.getInscriptionId(id)
-    if (!userInscription) {
+    const user = await this.usersInscription.getInscriptionId(id)
+
+    if (!user) {
       throw new Error('No se encontró una inscripción con ese ID')
     }
 
-    return userInscription
+    return user
   }
 
-  // ✅ Crear nueva inscripción
-  async createNewInscription(body) {
-    // Validación de estructura básica
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      throw new Error('Los datos enviados no son válidos')
-    }
-
-    // Validación de campos obligatorios según el modelo
-    const requiredFields = [
+  /* -------------------------------------------------------------
+     📌 VALIDACIÓN CENTRALIZADA DE FORMULARIO
+  ------------------------------------------------------------- */
+  validateForm(body) {
+    const required = [
       'name',
       'lastName',
       'document',
@@ -67,199 +101,120 @@ class UsersInscriptionService {
       'sportBackground'
     ]
 
-    const missingFields = requiredFields.filter((field) => !body[field])
-    if (missingFields.length > 0) {
-      throw new Error(`Faltan campos obligatorios: ${missingFields.join(', ')}`)
+    const missing = required.filter((f) => !body[f])
+    if (missing.length > 0) {
+      throw new Error(`Faltan campos obligatorios: ${missing.join(', ')}`)
     }
 
-    // Validaciones específicas por tipo de dato
-    const validations = [
-      {
-        field: 'name',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'El nombre debe ser un texto válido'
-      },
-      {
-        field: 'lastName',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'El apellido debe ser un texto válido'
-      },
-      {
-        field: 'document',
-        validator: (value) => Number.isInteger(value) && value > 0,
-        message: 'El documento debe ser un número entero positivo'
-      },
-      {
-        field: 'nationality',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'La nacionalidad debe ser un texto válido'
-      },
-      {
-        field: 'birthDate',
-        validator: (value) => !isNaN(Date.parse(value)),
-        message: 'La fecha de nacimiento debe ser una fecha válida'
-      },
-      {
-        field: 'email',
-        validator: (value) => {
-          const emailRegex = /^\S+@\S+\.\S+$/
-          return typeof value === 'string' && emailRegex.test(value)
-        },
-        message: 'El email debe tener un formato válido (ejemplo: usuario@dominio.com)'
-      },
-      {
-        field: 'cellPhone',
-        validator: (value) => Number.isInteger(value) && value > 0,
-        message: 'El celular debe ser un número válido'
-      },
-      {
-        field: 'address',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'La dirección debe ser un texto válido'
-      },
-      {
-        field: 'province',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'La provincia debe ser un texto válido'
-      },
-      {
-        field: 'locality',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'La localidad debe ser un texto válido'
-      },
-      {
-        field: 'occupation',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'La ocupación debe ser un texto válido'
-      },
-      {
-        field: 'studies',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'Los estudios deben ser un texto válido'
-      },
-      {
-        field: 'sportBackground',
-        validator: (value) => typeof value === 'string' && value.trim().length > 0,
-        message: 'El antecedente deportivo debe ser un texto válido'
+    // Documento
+    if (!this.isNumeric(body.document)) {
+      throw new Error('El documento debe contener solo números')
+    }
+
+    // Celular
+    if (!this.isNumeric(body.cellPhone)) {
+      throw new Error('El celular debe ser un número válido')
+    }
+
+    // Email
+    if (!this.isEmail(body.email)) {
+      throw new Error('Debe proporcionar un email válido')
+    }
+
+    // Fecha nacimiento
+    const birth = new Date(body.birthDate)
+    const hoy = new Date()
+    if (birth > hoy) throw new Error('La fecha de nacimiento no puede ser futura')
+
+    // Texto mínimos
+    const textFields = ['name', 'lastName', 'nationality', 'address', 'locality', 'occupation']
+
+    textFields.forEach((field) => {
+      if (String(body[field]).trim().length < 2) {
+        throw new Error(`El campo ${field} es demasiado corto`)
       }
-    ]
+    })
+  }
 
-    // Validaciones para campos opcionales (si están presentes)
-    const optionalValidations = [
-      {
-        field: 'placeOfBirth',
-        validator: (value) => typeof value === 'string',
-        message: 'El lugar de nacimiento debe ser un texto válido'
-      },
-      {
-        field: 'postalCode',
-        validator: (value) => value === undefined || (Number.isInteger(value) && value > 0),
-        message: 'El código postal debe ser un número válido'
-      }
-    ]
+  /* -------------------------------------------------------------
+     📌 CREATE
+  ------------------------------------------------------------- */
+  async createNewInscription(body) {
+    secureLog('📤 Service → createNewInscription (raw):', body)
 
-    // Ejecutar validaciones obligatorias
-    for (const validation of validations) {
-      if (!validation.validator(body[validation.field])) {
-        throw new Error(validation.message)
-      }
+    if (!body || typeof body !== 'object') {
+      throw new Error('Los datos enviados no son válidos')
     }
 
-    // Ejecutar validaciones opcionales
-    for (const validation of optionalValidations) {
-      if (body[validation.field] !== undefined && !validation.validator(body[validation.field])) {
-        throw new Error(validation.message)
-      }
-    }
+    // Validación limpia y centralizada
+    this.validateForm(body)
 
-    // Validación adicional: formato de email (más específica)
-    const email = body.email.trim()
-    if (email.length > 254) {
-      throw new Error('El email no puede exceder los 254 caracteres')
-    }
-
-    // Validación adicional: fecha de nacimiento razonable
-    const birthDate = new Date(body.birthDate)
-    const today = new Date()
-    const minDate = new Date('1900-01-01')
-
-    if (birthDate > today) {
-      throw new Error('La fecha de nacimiento no puede ser futura')
-    }
-
-    if (birthDate < minDate) {
-      throw new Error('La fecha de nacimiento no puede ser anterior a 1900')
-    }
-
-    // Validación adicional: documento no negativo
-    if (body.document < 0) {
-      throw new Error('El documento no puede ser negativo')
-    }
-
-    // Validación adicional: celular no negativo
-    if (body.cellPhone < 0) {
-      throw new Error('El celular no puede ser negativo')
-    }
-
-    // Limpiar y formatear datos antes de enviar a MongoDB
-    const cleanedData = {
+    // Normalizamos data
+    const data = {
+      ...body,
       name: body.name.trim(),
       lastName: body.lastName.trim(),
-      document: body.document,
-      nationality: body.nationality.trim(),
-      birthDate: birthDate,
-      email: email.toLowerCase(),
-      cellPhone: body.cellPhone,
-      address: body.address.trim(),
-      province: body.province.trim(),
-      locality: body.locality.trim(),
-      occupation: body.occupation.trim(),
-      studies: body.studies.trim(),
-      sportBackground: body.sportBackground.trim()
+      email: body.email.trim().toLowerCase(),
+      birthDate: new Date(body.birthDate),
+      document: Number(body.document),
+      cellPhone: Number(body.cellPhone),
+      postalCode: body.postalCode ? Number(body.postalCode) : undefined,
+      placeOfBirth: body.placeOfBirth?.trim()
     }
 
-    // Agregar campos opcionales si están presentes
-    if (body.placeOfBirth) {
-      cleanedData.placeOfBirth = body.placeOfBirth.trim()
-    }
-
-    if (body.postalCode) {
-      cleanedData.postalCode = body.postalCode
-    }
+    secureLog('🔧 Service → cleanedData:', data)
 
     try {
-      const newInscription = await this.usersInscription.createInscription(cleanedData)
-      return newInscription
-    } catch (error) {
-      // Manejo específico de errores de MongoDB
-      if (error.code === 11000) {
+      const created = await this.usersInscription.createInscription(data)
+      log('✅ Inscripción creada correctamente en MongoDB')
+
+      // -----------------------------------------------------
+      // EMAIL VALIDATION (NO BLOQUEA INSCRIPCIÓN)
+      // -----------------------------------------------------
+      if (mailingService) {
+        mailingService.createEmailValidationIncription(created.email).catch((err) => {
+          logError('⚠ Error enviando email de validación (no bloquea inscripción):', err.message)
+        })
+      } else {
+        warn('⚠ MailingService NO inyectado → No se envió email de validación')
+      }
+
+      return created
+    } catch (err) {
+      logError('❌ Error Mongo al crear inscripción:', err)
+
+      if (err.code === 11000) {
         throw new Error('El email ya está registrado en el sistema')
       }
-      if (error.name === 'ValidationError') {
-        const messages = Object.values(error.errors).map((err) => err.message)
-        throw new Error(`Error de validación: ${messages.join(', ')}`)
+
+      if (err.name === 'ValidationError') {
+        throw new Error(
+          Object.values(err.errors)
+            .map((e) => e.message)
+            .join(', ')
+        )
       }
+
       throw new Error('Error al crear la inscripción en la base de datos')
     }
   }
 
-  // ✅ Eliminar inscripción por ID
+  /* -------------------------------------------------------------
+     📌 DELETE
+  ------------------------------------------------------------- */
   async deleteInscriptionById(id) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    warn(`🗑 Service → deleteInscriptionById id=${id}`)
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error('El ID proporcionado no es válido')
     }
 
-    const userInscription = await this.usersInscription.getInscriptionId(id)
-    if (!userInscription) {
+    const exists = await this.usersInscription.getInscriptionId(id)
+    if (!exists) {
       throw new Error('La inscripción no existe')
     }
 
-    const deleted = await this.usersInscription.deleteInscription(id)
-    if (!deleted) {
-      throw new Error('No se pudo eliminar la inscripción')
-    }
-
-    return deleted
+    return await this.usersInscription.deleteInscription(id)
   }
 }
 

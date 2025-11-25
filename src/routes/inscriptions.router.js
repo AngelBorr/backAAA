@@ -1,27 +1,73 @@
+// src/routes/inscriptions.router.js
+
+import MyOwnRouter from './router.js'
 import {
   getAllInscription,
-  getInscription,
   getInscriptionById,
+  getInscription,
   addInscription,
   deleteInscriptionById
 } from '../controllers/controller.inscription.js'
-import MyOwnRouter from './router.js'
+
+import { log, warn, error as logError } from '../utils/logger.js'
 
 export default class InscriptionsRouter extends MyOwnRouter {
   init() {
-    // la ruta get debera traer todas las inscripciones
-    this.get('/', ['ADMIN'], getAllInscription)
+    log('📌 InscriptionsRouter inicializado')
 
-    // la ruta get debera traer una inscripcion por su id
-    this.get('/id/:id', ['ADMIN'], getInscriptionById)
+    // Obtener TODAS las inscripciones
+    this.get(
+      '/',
+      ['ADMIN'],
+      (req, res, next) => {
+        log('📥 GET /api/inscriptions → obtener todas las inscripciones')
+        next()
+      },
+      getAllInscription
+    )
 
-    // la ruta get debera traer una inscripcion por su email
-    this.get('/email/:email', ['ADMIN'], getInscription)
+    // Obtener inscripción por ID
+    this.get(
+      '/id/:id',
+      ['ADMIN'],
+      (req, res, next) => {
+        log(`📥 GET /api/inscriptions/id/${req.params.id}`)
+        next()
+      },
+      getInscriptionById
+    )
 
-    // la ruta post  debera crear una nueva inscripcion
-    this.post('/add', ['public'], addInscription)
+    // Obtener inscripción por email
+    this.get(
+      '/email/:email',
+      ['ADMIN'],
+      (req, res, next) => {
+        log(`📥 GET /api/inscriptions/email/${req.params.email}`)
+        next()
+      },
+      getInscription
+    )
 
-    // la ruta delete debera eliminar una inscripcion por su id
-    this.delete('/:id', ['ADMIN'], deleteInscriptionById)
+    // Crear inscripción (acceso público)
+    this.post(
+      '/add',
+      ['PUBLIC'],
+      (req, res, next) => {
+        log('📤 POST /api/inscriptions/add → creando nueva inscripción')
+        next()
+      },
+      addInscription
+    )
+
+    // Eliminar inscripción por ID
+    this.delete(
+      '/:id',
+      ['ADMIN'],
+      (req, res, next) => {
+        warn(`🗑 DELETE /api/inscriptions/${req.params.id}`)
+        next()
+      },
+      deleteInscriptionById
+    )
   }
 }

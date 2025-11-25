@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import env from '../config.js'
 import UsersService from './service.users.js'
+import { log, warn, error as logError, secureLog } from '../utils/logger.js'
 
 const usersService = new UsersService()
 
@@ -11,7 +12,6 @@ class SessionsService {
    */
   async generateAuthResponse(user, res) {
     try {
-      // 1️⃣ Construir el payload (sin password)
       const payload = {
         id: user._id,
         firstName: user.firstName,
@@ -20,46 +20,50 @@ class SessionsService {
         role: user.role
       }
 
-      // 2️⃣ Generar JWT con clave privada del entorno
+      secureLog('🔐 Generando token para usuario:', payload)
+
       const token = jwt.sign({ user: payload }, env.jwt.privateKey, {
         expiresIn: env.jwt.expiresIn
       })
 
-      // 3️⃣ Establecer cookie httpOnly segura (compatible con cross-site)
+      const isProd = process.env.NODE_ENV === 'production'
+
       res.cookie(env.cookie.name, token, {
-        httpOnly: true, // No accesible desde JS → protege contra XSS
-        secure: true, // Requiere HTTPS → obligatorio para SameSite=None
-        sameSite: 'none', // Permite compartir cookie entre dominios (Railway + Vercel)
-        maxAge: env.cookie.maxAge // Duración (ms)
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+        maxAge: env.cookie.maxAge
       })
 
-      console.log('✅ Cookie JWT seteada correctamente:', env.cookie.name)
+      log(`🍪 Cookie JWT seteada correctamente: ${env.cookie.name}`)
 
       return {
         status: 200,
         message: 'Usuario autenticado correctamente'
       }
-    } catch (error) {
-      console.error('❌ SessionsService.generateAuthResponse error:', error)
-      return {
-        status: 500,
-        message: 'Error al generar el token de autenticación'
-      }
+    } catch (err) {
+      logError('❌ SessionsService.generateAuthResponse error:', err)
+      // Pasamos error para que lo maneje errorHandler.js
+      err.statusCode = 500
+      throw err
     }
   }
 
   /**
    * 👤 Retorna los datos del usuario autenticado según el token JWT.
-   * El middleware handlePolicies inyecta req.user si el token es válido.
+   * El middleware handlePolicies ya inyectó req.user.
    */
   async getCurrentUser(user) {
     try {
       if (!user?.email) {
+        warn('⚠️ Token recibido sin email válido')
         return { status: 400, message: 'Datos de usuario inválidos en el token' }
       }
 
       const dbUser = await usersService.getUser(user.email)
+
       if (!dbUser) {
+        warn(`⚠️ Usuario no encontrado: ${user.email}`)
         return { status: 404, message: 'Usuario no encontrado' }
       }
 
@@ -71,13 +75,15 @@ class SessionsService {
         role: dbUser.role
       }
 
+      secureLog('🔍 Usuario encontrado en DB:', safeUser)
+
       return {
         status: 200,
         message: 'Usuario autenticado correctamente',
         user: safeUser
       }
-    } catch (error) {
-      console.error('❌ SessionsService.getCurrentUser error:', error)
+    } catch (err) {
+      logError('❌ SessionsService.getCurrentUser error:', err)
       return { status: 500, message: 'Error al obtener datos del usuario' }
     }
   }
@@ -85,21 +91,22 @@ class SessionsService {
   /**
    * 🚪 Cierre de sesión → limpia cookie y responde al cliente.
    */
-
   async logoutUser(user) {
     try {
       const email = user?.email || 'usuario desconocido'
-      console.log(`👋 Logout exitoso para: ${email}`)
 
-      // El service solo devuelve información; no toca la cookie
+      log(`👋 Logout exitoso para ${email}`)
+
       return {
         success: true,
         message: `Logout exitoso para ${email}`
       }
-    } catch (error) {
-      console.error('❌ SessionsService.logoutUser error:', error)
-      throw new Error('Error interno al cerrar sesión')
+    } catch (err) {
+      logError('❌ SessionsService.logoutUser error:', err)
+      err.statusCode = 500
+      throw err
     }
   }
 }
+
 export default SessionsService
