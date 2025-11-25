@@ -1,24 +1,27 @@
 // src/routes/debugEmail.router.js
 import MyOwnRouter from './router.js'
-import { injectMailingService } from '../services/service.inscription.js'
 import MailingService from '../services/service.mailing.js'
+import { injectMailingService } from '../services/service.inscription.js'
 import env from '../config.js'
 import { log, error as logError } from '../utils/logger.js'
 
-const mailingService = new MailingService()
-injectMailingService(mailingService)
+/**
+ * ⛔ IMPORTANTE:
+ * NO se inyecta aquí el MailingService.
+ * La inyección REAL se hace en app.js para evitar duplicaciones.
+ */
 
 export default class DebugEmailRouter extends MyOwnRouter {
   init() {
-    // ⛔ Se recomienda proteger esto con un SECRET
+    // Endpoint seguro para pruebas de envío de mail
     this.get(
       '/send-test',
-      ['PUBLIC'], // podés cambiarlo por ADMIN si preferís
+      ['PUBLIC'], // o ['ADMIN']
       async (req, res) => {
         try {
           const { email, secret } = req.query
 
-          // Protegido: evita que cualquiera lo use si cae la URL
+          // 🔐 Proteger acceso
           if (secret !== env.debugMailSecret) {
             logError('❌ Intento de uso sin secret válido')
             return res.status(401).json({
@@ -35,6 +38,10 @@ export default class DebugEmailRouter extends MyOwnRouter {
           }
 
           log(`📧 ENVIANDO EMAIL DE PRUEBA A: ${email}`)
+
+          // Usar la MISMA instancia global inyectada en app.js
+          const mailingService = new MailingService()
+          injectMailingService(mailingService)
 
           const result = await mailingService.createEmailValidationIncription(email)
 

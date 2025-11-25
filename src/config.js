@@ -41,7 +41,9 @@ const env = {
     pass: process.env.PASS_EMAIL,
     host: process.env.EMAIL_HOST || null,
     port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : null
-  }
+  },
+
+  debugMailSecret: process.env.DEBUG_MAIL_SECRET || 'MiClaveSuperSegura123'
 }
 
 export default env
