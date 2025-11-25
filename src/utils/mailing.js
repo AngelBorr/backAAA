@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { env } from '../config.js'
+import env from '../config.js'
 
 const emailConfig = {
   host: env.email.host, // mail.asociacionargentinadearbitros.com.ar
