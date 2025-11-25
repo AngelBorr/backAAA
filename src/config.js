@@ -16,7 +16,7 @@ const env = {
   },
 
   // 🗝️ KEYS
-  privateKey: process.env.PRIVATE_KEY || 'devAAASecretKey10', // para usos no-JWT
+  privateKey: process.env.PRIVATE_KEY || 'devAAASecretKey10',
   jwt: {
     privateKey: process.env.JWT_PRIVATE_KEY || 'devFallbackKey',
     expiresIn: process.env.JWT_EXPIRES_IN || '1h'
@@ -30,19 +30,23 @@ const env = {
     secure: true
   },
 
-  // 🔑 SESSION (opcional)
+  // 🔑 SESSION
   session: {
     secret: process.env.DATASESSION || 'sessionSecretAAA'
   },
 
-  // 📧 NODEMAIL
+  // 📧 NODEMAIL — SMTP CONFIG FIJA + FALLBACK
   email: {
-    user: process.env.USER_EMAIL,
-    pass: process.env.PASS_EMAIL,
-    host: process.env.EMAIL_HOST || null,
-    port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : null
+    user: process.env.USER_EMAIL, // obligatorio
+    pass: process.env.PASS_EMAIL, // obligatorio
+
+    // Estos valores JAMÁS quedan null
+    host: process.env.EMAIL_HOST || 'mail.asociacionargentinadearbitros.com.ar',
+
+    port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : 26 // fallback seguro al puerto SMTP de cPanel
   },
 
+  // 🔍 DEBUG EMAIL ENDPOINT
   debugMailSecret: process.env.DEBUG_MAIL_SECRET || 'MiClaveSuperSegura123'
 }
 
