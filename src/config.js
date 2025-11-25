@@ -39,7 +39,6 @@ const env = {
   email: {
     user: process.env.USER_EMAIL,
     pass: process.env.PASS_EMAIL,
-    service: process.env.EMAIL_SERVICE || null,
     host: process.env.EMAIL_HOST || null,
     port: process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : null
   }
