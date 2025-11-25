@@ -23,11 +23,25 @@ import StudentRouter from './routes/student.router.js'
 import FilesRouter from './routes/files.router.js'
 import InscriptionsRouter from './routes/inscriptions.router.js'
 import EmailLogsRouter from './routes/emailLogs.router.js'
+import DebugEmailRouter from './routes/debugEmail.router.js'
+
+// ✔ Mailing Service (inyectable)
+import MailingService from './services/service.mailing.js'
+import { injectMailingService } from './services/service.inscription.js'
 
 // Inicializar app
 const app = express()
 
-// 🧱 Middlewares base
+// --------------------------------------------------------------
+// ✔ Instanciar e inyectar MailingService (EVITA CICLOS)
+// --------------------------------------------------------------
+const mailingService = new MailingService()
+injectMailingService(mailingService)
+log('📧 MailingService inyectado correctamente')
+
+// --------------------------------------------------------------
+// Middlewares base
+// --------------------------------------------------------------
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -49,7 +63,9 @@ app.use(
 initializePassport()
 app.use(passport.initialize())
 
+// --------------------------------------------------------------
 // 🗄️ Conexión MongoDB
+// --------------------------------------------------------------
 mongoose
   .connect(env.mongo.url, {
     useNewUrlParser: true,
@@ -58,7 +74,9 @@ mongoose
   .then(() => log('✅ Conectado a MongoDB'))
   .catch((err) => logError('❌ Error MongoDB:', err.message))
 
+// --------------------------------------------------------------
 // 📦 GridFS
+// --------------------------------------------------------------
 let gfsBucket
 app.use((req, res, next) => {
   if (!gfsBucket && mongoose.connection.readyState === 1) {
@@ -69,21 +87,28 @@ app.use((req, res, next) => {
   next()
 })
 
+// --------------------------------------------------------------
 // 🚀 Rutas
+// --------------------------------------------------------------
 app.use('/api/users', new UsersRouter().getRouter())
 app.use('/api/sessions', new SessionsRouter().getRouter())
 app.use('/api/students', new StudentRouter().getRouter())
 app.use('/api/files', new FilesRouter().getRouter())
 app.use('/api/inscriptions', new InscriptionsRouter().getRouter())
 app.use('/api/email-logs', new EmailLogsRouter().getRouter())
+app.use('/api/debug-email', new DebugEmailRouter().getRouter())
 
-// 📌 Mostrar las rutas cargadas
+// --------------------------------------------------------------
+// 📌 Mostrar rutas cargadas
+// --------------------------------------------------------------
 app.listen(env.port, () => {
   displayRoutes(app)
   log(`🚀 Servidor escuchando en puerto ${env.port}`)
 })
 
-// Manejador global de errores (REQUIRED PARA LOS TESTS)
+// --------------------------------------------------------------
+// 🟥 Manejadores de errores
+// --------------------------------------------------------------
 app.use((err, req, res, next) => {
   const status = err.statusCode || 500
 
@@ -96,7 +121,7 @@ app.use((err, req, res, next) => {
 // 404 para rutas no encontradas
 app.use(notFoundHandler)
 
-// 🟥 Middleware global de errores (SIEMPRE AL FINAL)
+// 🟥 Middleware global de errores
 app.use(errorHandler)
 
 export default app
