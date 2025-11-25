@@ -1,4 +1,4 @@
-/* import nodemailer from 'nodemailer'
+import nodemailer from 'nodemailer'
 import env from '../config.js'
 
 const emailConfig = env.email.service
@@ -20,9 +20,8 @@ const emailConfig = env.email.service
     }
 
 export const transport = nodemailer.createTransport(emailConfig)
- */
 
-import nodemailer from 'nodemailer'
+/* import nodemailer from 'nodemailer'
 import { env } from '../config.js'
 
 export const transport = nodemailer.createTransport({
@@ -37,3 +36,4 @@ export const transport = nodemailer.createTransport({
     rejectUnauthorized: false
   }
 })
+ */
