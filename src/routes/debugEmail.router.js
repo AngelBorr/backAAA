@@ -13,17 +13,63 @@ import { log, error as logError } from '../utils/logger.js'
 
 export default class DebugEmailRouter extends MyOwnRouter {
   init() {
-    // Endpoint seguro para pruebas de envío de mail
+    /* ============================================================
+        📌 TEST SMTP (LEGADO)
+    ============================================================ */
+    this.get('/send-test', ['PUBLIC'], async (req, res) => {
+      try {
+        const { email, secret } = req.query
+
+        if (secret !== env.debugMailSecret) {
+          logError('❌ Intento de uso sin secret válido (SMTP)')
+          return res.status(401).json({
+            success: false,
+            message: 'UNAUTHORIZED – Secret inválido'
+          })
+        }
+
+        if (!email) {
+          return res.status(400).json({
+            success: false,
+            message: 'Debe enviar el parámetro email'
+          })
+        }
+
+        log(`📧 (SMTP) Enviando email de prueba a: ${email}`)
+
+        const mailingService = new MailingService()
+        injectMailingService(mailingService)
+
+        const result = await mailingService.createEmailValidationIncription(email)
+
+        return res.status(200).json({
+          success: true,
+          message: 'Email SMTP de prueba enviado correctamente',
+          result
+        })
+      } catch (err) {
+        logError('❌ Error en /debug-email/send-test:', err)
+        return res.status(500).json({
+          success: false,
+          message: err.message
+        })
+      }
+    })
+
+    /* ============================================================
+        📌 TEST RESEND (NUEVO)
+        Usa fetch + Resend API (ya migrado en service.mailing.js)
+    ============================================================ */
     this.get(
-      '/send-test',
-      ['PUBLIC'], // o ['ADMIN']
+      '/send-test-resend',
+      ['PUBLIC'], // Cambiar a ['ADMIN'] si querés más seguridad
       async (req, res) => {
         try {
           const { email, secret } = req.query
 
-          // 🔐 Proteger acceso
+          // 🔐 Verificación secreta
           if (secret !== env.debugMailSecret) {
-            logError('❌ Intento de uso sin secret válido')
+            logError('❌ Intento de uso sin secret válido (Resend)')
             return res.status(401).json({
               success: false,
               message: 'UNAUTHORIZED – Secret inválido'
@@ -37,21 +83,22 @@ export default class DebugEmailRouter extends MyOwnRouter {
             })
           }
 
-          log(`📧 ENVIANDO EMAIL DE PRUEBA A: ${email}`)
+          log(`📧 (Resend) Enviando email de prueba a: ${email}`)
 
-          // Usar la MISMA instancia global inyectada en app.js
+          // 🧩 Instanciamos el mismo servicio cargado en app.js
           const mailingService = new MailingService()
           injectMailingService(mailingService)
 
+          // 🚀 Enviar email usando Resend
           const result = await mailingService.createEmailValidationIncription(email)
 
           return res.status(200).json({
             success: true,
-            message: 'Email de prueba enviado correctamente',
-            smtp: result
+            message: 'Email Resend enviado correctamente',
+            resend: result
           })
         } catch (err) {
-          logError('❌ Error en /debug-email/send-test:', err)
+          logError('❌ Error en /debug-email/send-test-resend:', err)
           return res.status(500).json({
             success: false,
             message: err.message

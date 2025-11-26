@@ -47,7 +47,13 @@ const env = {
   },
 
   // 🔍 DEBUG EMAIL ENDPOINT
-  debugMailSecret: process.env.DEBUG_MAIL_SECRET || 'MiClaveSuperSegura123'
+  debugMailSecret: process.env.DEBUG_MAIL_SECRET || 'MiClaveSuperSegura123',
+
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.RESEND_FROM,
+    url: process.env.RESEND_URL || 'https://api.resend.com/emails'
+  }
 }
 
 export default env
