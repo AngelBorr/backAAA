@@ -35,7 +35,7 @@ class MailingService {
       /* =======================
          LOGO → URL pública del backend
       ======================= */
-      const logoUrl = logoPath
+      const logoUrl = logoPath.toString('base64')
 
       /* =======================
          HTML ORIGINAL
