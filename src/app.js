@@ -30,6 +30,12 @@ import SmtpTestRouter from './routes/smtpTest.router.js'
 import MailingService from './services/service.mailing.js'
 import { injectMailingService } from './services/service.inscription.js'
 
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 // Inicializar app
 const app = express()
 
@@ -46,6 +52,9 @@ log('📧 MailingService inyectado correctamente')
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// 🌐 Archivos estáticos
+app.use('/public', express.static(path.join(__dirname, 'public')))
 
 // 🌐 Logger HTTP (Morgan + Winston)
 app.use(httpLogger)
