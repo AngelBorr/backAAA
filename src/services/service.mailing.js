@@ -35,7 +35,7 @@ class MailingService {
       /* =======================
          LOGO → URL pública del backend
       ======================= */
-      const logoUrl = 'https://backaaa-production.up.railway.app/public/img/logo-aaa.png'
+      const logoUrl = logoPath
 
       /* =======================
          HTML ORIGINAL
