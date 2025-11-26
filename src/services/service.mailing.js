@@ -33,9 +33,8 @@ class MailingService {
       /* =======================
          LOGO → URL pública del backend
       ======================= */
-      const logoPath = path.join(__dirname, '../../public/img/logo-aaa.png')
-      const logoBuffer = fs.readFileSync(logoPath)
-      const logoUrl = logoBuffer.toString('base64')
+
+      const logoPath = 'https://asociacionargentinadearbitros.com.ar/img/logos/logo-aaa.png'
 
       /* =======================
          HTML ORIGINAL
