@@ -37,7 +37,7 @@ class MailingService {
          LOGO → Base64 INLINE
          (para que SIEMPRE cargue)
       ======================= */
-      const logoImgPath = path.join(__dirname, '../../public/img/logos/logo-aaa.png')
+      const logoImgPath = path.join(__dirname, '../../public/img/logo-aaa.png')
       const logoBuffer = fs.readFileSync(logoImgPath)
       const logoBase64 = logoBuffer.toString('base64')
       const logoDataUri = `data:image/png;base64,${logoBase64}`
