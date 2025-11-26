@@ -30,12 +30,12 @@ class MailingService {
       const pdfBuffer = fs.readFileSync(pdfPath)
       const pdfBase64 = pdfBuffer.toString('base64')
 
-      const logoPath = path.join(__dirname, '../../public/img/logo-aaa.png')
-
       /* =======================
          LOGO → URL pública del backend
       ======================= */
-      const logoUrl = logoPath.toString('base64')
+      const logoPath = path.join(__dirname, '../../public/img/logo-aaa.png')
+      const logoBuffer = fs.readFileSync(logoPath)
+      const logoUrl = logoBuffer.toString('base64')
 
       /* =======================
          HTML ORIGINAL
