@@ -35,7 +35,7 @@ class MailingService {
       /* =======================
          LOGO → URL pública del backend
       ======================= */
-      const logoUrl = logoPath
+      const logoUrl = 'https://backaaa-production.up.railway.app/public/img/logo-aaa.png'
 
       /* =======================
          HTML ORIGINAL
@@ -49,7 +49,7 @@ class MailingService {
           font-family: Arial;
           text-align: center;
         ">
-          <img src="${logoUrl}" alt="AAA" width="180" style="margin-bottom: 20px;" />
+          <img src="${logoUrl}" alt="AAA" width="150" style="margin-bottom: 20px;" />
 
           <h2 style="color:#1282a2;">Inscripción Confirmada</h2>
 
