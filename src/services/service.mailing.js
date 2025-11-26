@@ -34,7 +34,7 @@ class MailingService {
          LOGO → URL pública del backend
       ======================= */
 
-      const logoPath = 'https://asociacionargentinadearbitros.com.ar/img/logos/logo-aaa.png'
+      const logoUrl = 'https://asociacionargentinadearbitros.com.ar/img/logos/logo-aaa.png'
 
       /* =======================
          HTML ORIGINAL
