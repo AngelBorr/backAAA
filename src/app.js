@@ -24,6 +24,7 @@ import FilesRouter from './routes/files.router.js'
 import InscriptionsRouter from './routes/inscriptions.router.js'
 import EmailLogsRouter from './routes/emailLogs.router.js'
 import DebugEmailRouter from './routes/debugEmail.router.js'
+import SmtpTestRouter from './routes/smtpTest.router.js'
 
 // ✔ Mailing Service (inyectable)
 import MailingService from './services/service.mailing.js'
@@ -97,6 +98,7 @@ app.use('/api/files', new FilesRouter().getRouter())
 app.use('/api/inscriptions', new InscriptionsRouter().getRouter())
 app.use('/api/email-logs', new EmailLogsRouter().getRouter())
 app.use('/api/debug-email', new DebugEmailRouter().getRouter())
+app.use('/api/smtp-test', new SmtpTestRouter().getRouter())
 
 // --------------------------------------------------------------
 // 📌 Mostrar rutas cargadas
