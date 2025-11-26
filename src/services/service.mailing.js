@@ -24,9 +24,9 @@ class MailingService {
       if (!user) throw new Error('No se encontró un usuario con ese email')
 
       /* =======================
-         PDF → Base64 (igual que antes)
+         PDF → RUTA ORIGINAL (FUNCIONAL)
       ======================= */
-      const pdfPath = path.join(__dirname, '../public/docs/Confirmacion-2026.pdf')
+      const pdfPath = path.join(__dirname, '../../public/docs/Confirmacion-2026.pdf')
       const pdfBuffer = fs.readFileSync(pdfPath)
       const pdfBase64 = pdfBuffer.toString('base64')
 
@@ -36,7 +36,7 @@ class MailingService {
       const logoUrl = 'https://backaaa-production.up.railway.app/public/img/logo-aaa.png'
 
       /* =======================
-         HTML ORIGINAL (sin cambios)
+         HTML ORIGINAL
       ======================= */
       const html = `
         <div style="
