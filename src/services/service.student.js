@@ -1,7 +1,4 @@
 import StudentsRepository from '../repositories/student.repository.js'
-import CustomError from './errors/customError.js'
-import EErrors from './errors/enums.js'
-import { generateUserErrorInfo } from './errors/info.js'
 import FileService from './service.files.js'
 
 class StudentsService {
@@ -9,129 +6,109 @@ class StudentsService {
     this.students = new StudentsRepository()
   }
 
-  async getAllStudent() {
+  // ======================================================
+  async getAllStudents() {
     try {
       const students = await this.students.getAllStudents()
-      if (!students || students.length === 0) {
-        throw new Error('No se han encontrado Studiantes registrados')
-      } else {
-        return students
-      }
+      return { success: true, data: students }
     } catch (error) {
-      throw new Error('Se produjo un error al leer los estudiantes registrados')
+      return { success: false, error: error.message }
     }
   }
 
-  //retorna el usuario
-  async getStudent(email) {
-    try {
-      if (!email) {
-        console.log('error')
-        CustomError.createError({
-          name: 'student Creation Error',
-          cause: generateUserErrorInfo({ email }),
-          code: EErrors.INVALID_TYPES_ERROR,
-          message: 'Error trying to create a new user'
-        })
-      }
-      const student = await this.students.getStudent(email)
-      return student
-    } catch (error) {
-      throw new Error('Se produjo un error al leer el E-mail ingresado')
-    }
-  }
-
+  // ======================================================
   async getStudentById(id) {
     try {
       const student = await this.students.getStudentById(id)
-      return student
+      return { success: true, data: student }
     } catch (error) {
-      throw new Error('Se produjo un error al leer el id ingresado')
+      return { success: false, error: error.message }
     }
   }
 
-  //crea usuario
-  async createStudent(body) {
+  // ======================================================
+  async addStudent(body, file) {
     try {
-      /* if (typeof body != 'object') {
-        throw new Error(
-          'Se produjo un error al cargar los datos del nuevo estudiante, verifique si los campos estan correctamente completados'
-        )
-      } */
-      /* const { firstName, lastName, dni, role } = body
-      if (!firstName || !lastName || !dni || !role) {
-        console.log('error')
-        CustomError.createError({
-          name: 'student Creation Error',
-          cause: generateUserErrorInfo({
-            firstName,
-            lastName,
-            dni,
-            role
-          }),
-          code: EErrors.INVALID_TYPES_ERROR,
-          message: 'Error trying to create a new student'
-        })
-      } */
-      const newStudent = await this.students.createStudent(body)
-      return newStudent
-    } catch (error) {
-      console.error('Error service', error.message, error.stack)
-      throw new Error('se produjo un error al crear un estudiante nuevo', error.message)
-    }
-  }
+      // 1. Subir archivo a GridFS
+      const upload = await FileService.uploadFile(file.buffer, file.originalname, {
+        contentType: file.mimetype,
+        studentName: body.firstName,
+        studentLastName: body.lastName
+      })
 
-  async deleteStudentById(id) {
-    try {
-      const studentId = id
-      const student = await this.students.getStudentById(studentId)
-      if (!student) {
-        throw new Error('El estudiante no existe')
-      } else {
-        //eliminar la imagen o archivo del servidor
-        const idImage = student.documents[0].gridfsId
-        console.log('service-student-1', idImage)
-        const image = await FileService.getFileById(idImage)
-        console.log('service-student-2', image)
+      if (!upload.success) {
+        return { success: false, error: upload.error }
+      }
 
-        // si imagen existe se elimina y si no da error y no se puede eliminar al estudiante
-        if ((image.success = false)) {
-          throw new Error('Archivo no encontrado en GridFS')
-        } else {
-          const deleteImage = await FileService.deleteFileById(idImage)
-          console.log('Service-estudent-3', deleteImage)
-          if ((deleteImage.success = false)) {
-            throw new Error('No se pudo eliminar la imagen del estudiante')
-          } else {
-            const deleteStudent = await this.students.deleteStudent(studentId)
-            console.log('service-student-4', deleteStudent)
-            if (deleteStudent.deletedCount != 1) {
-              throw new Error('No se pudo eliminar al estudiante')
-            } else {
-              return {
-                success: true,
-                deleteStudent: deleteStudent
-              }
-            }
+      const fileId = upload.fileId.toString()
+      const fileUrl = `/api/files/${fileId}`
+
+      // 2. Crear estructura final del estudiante (documents es ARRAY)
+      const studentData = {
+        ...body,
+        documents: [
+          {
+            name: file.originalname,
+            reference: fileUrl,
+            gridfsId: fileId,
+            filename: upload.filename,
+            uploadDate: new Date(),
+            contentType: file.mimetype
+          }
+        ]
+      }
+
+      // 3. Crear estudiante
+      const newStudent = await this.students.createStudent(studentData)
+
+      return {
+        success: true,
+        data: {
+          student: newStudent,
+          file: {
+            fileId,
+            url: fileUrl,
+            filename: upload.filename
           }
         }
-
-        /* if (urlImage) {
-          const deleteImage = await fs.promises.unlink(urlImage)
-          if (deleteImage) {
-            throw new Error('No se pudo eliminar la imagen del estudiante')
-          } else {
-            //eliminar el estudiante de la base de datos
-            const deletedStudent = await this.students.deleteStudent(studentId)
-            if (!deletedStudent) {
-              throw new Error('No se pudo eliminar el estudiante')
-            } else {
-              return deletedStudent
-            }
-          }*/
       }
     } catch (error) {
-      console.log(error.message)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // ======================================================
+  async deleteStudentById(id) {
+    try {
+      const student = await this.students.getStudentById(id)
+
+      if (!student) {
+        return { success: false, message: 'El estudiante no existe' }
+      }
+
+      if (!student.documents || student.documents.length === 0) {
+        return { success: false, message: 'El estudiante no tiene documentos' }
+      }
+
+      const fileId = student.documents[0].gridfsId
+
+      // 1. Eliminar archivo de GridFS
+      const deletedFile = await FileService.deleteFileById(fileId)
+
+      if (!deletedFile.success) {
+        return { success: false, message: deletedFile.error }
+      }
+
+      // 2. Eliminar estudiante
+      const deletedStudent = await this.students.deleteStudent(id)
+
+      if (deletedStudent.deletedCount !== 1) {
+        return { success: false, message: 'No se pudo eliminar el estudiante' }
+      }
+
+      return { success: true, message: 'Estudiante eliminado correctamente' }
+    } catch (error) {
+      return { success: false, message: error.message }
     }
   }
 }
